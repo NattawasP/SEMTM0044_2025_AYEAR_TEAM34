@@ -54,3 +54,5 @@ Thumbs.db
 .env.local
 *.key
 credentials.json
+.env
+__pycache__/
