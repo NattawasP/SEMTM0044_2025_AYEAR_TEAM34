@@ -10,6 +10,17 @@ data/processed/
 *.parquet
 *.gz
 *.zip
+data/
+*.csv
+*.tsv
+*.txt
+*.xlsx
+*.parquet
+*.gz
+*.zip
+*.gct
+*.json
+*.pkl
 
 # Allow small mapping/config files if needed
 !data/raw/README.md
