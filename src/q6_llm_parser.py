@@ -5,34 +5,53 @@ import os
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
-from rapidfuzz import process, fuzz
 
 load_dotenv()
 client = OpenAI() 
 
-SYSTEM_PROMPT = """You extract cell-line search criteria from a scientist's query.
+SYSTEM_PROMPT = """You extract cell-line search info from a scientist's query.
 
-Return ONLY a valid JSON object with these fields:
+Return ONLY valid JSON with these fields:
 {
-  "target_gene": "<hugo symbol (e.g. EGFR, ERBB2, KRAS) or null>",
-  "lineage": "<DepMap lineage in lowercase (e.g. lung, breast, skin, colon) or null>",
-  "primary_disease": "<full DepMap disease name (e.g. 'Lung Cancer', 'Non-Small Cell Lung Cancer') or null>",
-  "subtype": "<Oncotree subtype (e.g. 'Lung Adenocarcinoma') or null>",
-  "match_level": "<'subtype' | 'primary_disease' | 'lineage'>"
+  "target_gene": "gene symbol like EGFR, or null",
+  "lineage": "DepMap lineage in lowercase, or null",
+  "primary_disease": "DepMap disease name in Title Case, or null",
+  "subtype": "specific subtype, or null",
+  "match_level": "subtype, primary_disease, or lineage"
 }
 
-Rules:
-- Use DepMap OncotreeLineage terminology
-- Handle synonyms: NSCLC → Non-Small Cell Lung Cancer
+DepMap Lineage terms (USE EXACTLY THESE):
+- lung, breast, skin, colorectal, ovary, prostate
+- pancreas, liver, kidney, bladder, urinary_tract
+- central_nervous_system, peripheral_nervous_system
+- lymphoid, myeloid, blood
+- bone, soft_tissue, thyroid, uterus
+- upper_aerodigestive, esophagus, stomach
+
+DepMap Disease examples (USE EXACT NAMES):
+- "Lung Cancer", "Non-Small Cell Lung Cancer", "Small Cell Lung Cancer"
+- "Breast Cancer"
+- "Colon/Colorectal Cancer"
+- "Skin Cancer", "Melanoma"
+- "Bladder Cancer"
+- "Ovarian Cancer"
+- "Pancreatic Cancer"
+- "Liver Cancer"
+- "Brain Cancer"
+
+Synonyms to convert:
+- HER2 → ERBB2
+- NSCLC → Non-Small Cell Lung Cancer
 - LUAD → Lung Adenocarcinoma
-- HER2+ → target_gene = "ERBB2"
-- If uncertain about subtype, leave null
-- match_level = the deepest level user was specific about
-- Return null (not empty string) if unknown
+- CRC → Colorectal Cancer
+- colon → colorectal (lineage)
+- kidney → kidney (not renal)
+
+Use null if not sure. Be conservative — better null than wrong.
 """
 
 def parse_query(user_input):
-    response = client.chat.completion.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         temperature=0,
         response_format={"type": "json_object"},
