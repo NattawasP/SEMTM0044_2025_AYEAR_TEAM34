@@ -16,7 +16,7 @@ Return ONLY valid JSON with these fields:
   "target_gene": "gene symbol like EGFR, or null",
   "lineage": "DepMap lineage in lowercase, or null",
   "primary_disease": "DepMap disease name in Title Case, or null",
-  "subtype": "specific subtype, or null",
+  "subtype": "EXACT DepMap Subtype string, or null",
   "match_level": "subtype, primary_disease, or lineage"
 }
 
@@ -26,26 +26,43 @@ DepMap Lineage terms (USE EXACTLY THESE):
 - central_nervous_system, peripheral_nervous_system
 - lymphoid, myeloid, blood
 - bone, soft_tissue, thyroid, uterus
-- upper_aerodigestive, esophagus, stomach
+- upper_aerodigestive, esophagus, stomach, gastric
 
 DepMap Disease examples (USE EXACT NAMES):
-- "Lung Cancer", "Non-Small Cell Lung Cancer", "Small Cell Lung Cancer"
-- "Breast Cancer"
-- "Colon/Colorectal Cancer"
-- "Skin Cancer", "Melanoma"
-- "Bladder Cancer"
-- "Ovarian Cancer"
-- "Pancreatic Cancer"
-- "Liver Cancer"
-- "Brain Cancer"
+- "Lung Cancer", "Breast Cancer", "Colon/Colorectal Cancer"
+- "Skin Cancer", "Bladder Cancer", "Ovarian Cancer"
+
+DepMap Subtype format (COMPOUND — must use full string):
+Lung subtypes:
+- "Non-Small Cell Lung Cancer (NSCLC), Adenocarcinoma"      (for LUAD)
+- "Non-Small Cell Lung Cancer (NSCLC), Squamous Cell Carcinoma"  (for LUSC)
+- "Non-Small Cell Lung Cancer (NSCLC), Large Cell Carcinoma"
+- "Non-Small Cell Lung Cancer (NSCLC), Adenosquamous Carcinoma"
+- "Non-Small Cell Lung Cancer (NSCLC), unspecified"
+- "Small Cell Lung Cancer (SCLC)"
+- "Mesothelioma"
+- "Carcinoid"
+
+Breast subtypes:
+- "Invasive Breast Carcinoma"
+- "Ductal Adenocarcinoma"
+- "Ductal Adenocarcinoma, exocrine"
+
+Colorectal subtypes:
+- "Colon Adenocarcinoma"
+- "Adenocarcinoma"
+
+Skin subtypes:
+- "Melanoma"
+- "Squamous Cell Carcinoma"
 
 Synonyms to convert:
 - HER2 → ERBB2
 - NSCLC → Non-Small Cell Lung Cancer
-- LUAD → Lung Adenocarcinoma
+- LUAD → subtype "Non-Small Cell Lung Cancer (NSCLC), Adenocarcinoma"
+- LUSC → subtype "Non-Small Cell Lung Cancer (NSCLC), Squamous Cell Carcinoma"
+- SCLC → subtype "Small Cell Lung Cancer (SCLC)"
 - CRC → Colorectal Cancer
-- colon → colorectal (lineage)
-- kidney → kidney (not renal)
 
 Use null if not sure. Be conservative — better null than wrong.
 """
