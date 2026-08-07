@@ -7,8 +7,8 @@ Usage:
     python csv_to_parquet.py --input <path_to_harmonized_data> [--output <output_dir>]
 
 Example:
-    python csv_to_parquet.py --input ../AZ_project_data/hamonized_data
-    python csv_to_parquet.py --input D:/Prab/Bristol/Final_project/AZ_project_data/hamonized_data
+    python csv_to_parquet.py --input ../harmonized_data
+    python csv_to_parquet.py --input D:/Prab/Bristol/Final project/prab-branch/harmonized_data
 
 Output goes to data_prepare/data/ by default.
 """
