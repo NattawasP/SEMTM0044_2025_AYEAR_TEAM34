@@ -1,0 +1,114 @@
+/* ── FilterPanel ──────────────────────────────────────────── */
+
+.panel {
+  /* No border/shadow — sidebar section handles container */
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--clr-text);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+}
+
+.label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+}
+
+/* Mode toggle (Ignore / Include / Exclude) */
+.modeToggle {
+  display: flex;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.modeBtn {
+  flex: 1;
+  padding: var(--sp-sm) var(--sp-md);
+  border: none;
+  background: var(--clr-surface);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--clr-text-muted);
+  transition: all 0.15s;
+}
+
+.modeBtn:not(:last-child) {
+  border-right: 1px solid var(--clr-border);
+}
+
+.mode_ignore {
+  background: var(--clr-border);
+  color: var(--clr-text-secondary);
+  font-weight: 600;
+}
+
+.mode_include {
+  background: var(--clr-success);
+  color: white;
+  font-weight: 600;
+}
+
+.mode_exclude {
+  background: var(--clr-danger);
+  color: white;
+  font-weight: 600;
+}
+
+/* Dropdowns */
+.select {
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  background: var(--clr-surface);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.select:focus {
+  border-color: #f0b429;
+  box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.15);
+}
+
+/* Sliders */
+.slider {
+  width: 100%;
+  accent-color: #1a2a3a;
+  cursor: pointer;
+}
+
+/* Core checkbox */
+.checkField {
+  /* single column layout, no span needed */
+}
+
+.checkLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.checkLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--clr-primary);
+}

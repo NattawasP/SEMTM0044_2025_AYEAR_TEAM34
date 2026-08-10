@@ -1,0 +1,357 @@
+/* ── ResultsTable (mockup v2 style) ───────────────────────── */
+
+.wrapper {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid #e8e4dd;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.count {
+  font-weight: 400;
+  color: #888;
+}
+
+/* Compare bar */
+.compareBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  background: #1a2a3a;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.compareBtn {
+  padding: 7px 16px;
+  background: #f0b429;
+  color: #1a2a3a;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.compareBtn:hover {
+  opacity: 0.85;
+}
+
+.clearBtn {
+  padding: 7px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.clearBtn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Table */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th {
+  background: #f5f3ee;
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e8e4dd;
+  white-space: nowrap;
+}
+
+.thCheck {
+  width: 40px;
+  text-align: center !important;
+}
+
+.thRank {
+  width: 50px;
+}
+
+.row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.row:hover {
+  background: #faf8f4;
+}
+
+.row td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0ede8;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.row:last-child td {
+  border-bottom: none;
+}
+
+.rowSelected {
+  background: #f0f7ff;
+}
+
+.tdCheck {
+  text-align: center;
+  width: 40px;
+}
+
+.tdCheck input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #f0b429;
+  cursor: pointer;
+}
+
+/* Rank badge — gold/silver/bronze/grey */
+.rank {
+  width: 50px;
+}
+
+.rankBadge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+}
+
+.rank1 {
+  background: #f0b429;
+}
+
+.rank2 {
+  background: #9ca3af;
+}
+
+.rank3 {
+  background: #b87333;
+}
+
+.rankOther {
+  background: #d1d5db;
+  color: #666;
+}
+
+/* Cell name */
+.cellName {
+  font-weight: 600;
+  color: #1a2a3a;
+}
+
+.achId {
+  font-size: 10px;
+  color: #999;
+}
+
+.disease {
+  font-size: 11px;
+  color: #888;
+}
+
+/* Score bar */
+.scoreCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 130px;
+}
+
+.scoreBar {
+  width: 70px;
+  height: 5px;
+  background: #eee;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.scoreFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.fillHigh {
+  background: #2d6a4f;
+}
+
+.fillMid {
+  background: #f0b429;
+}
+
+.fillLow {
+  background: #dc3545;
+}
+
+.scoreVal {
+  font-weight: 700;
+  font-size: 13px;
+  min-width: 40px;
+}
+
+/* Confidence badge */
+.confBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.confHigh {
+  background: #e8f4e8;
+  color: #2d6a4f;
+}
+
+.confMid {
+  background: #fef3cd;
+  color: #856404;
+}
+
+.confLow {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Scenario tag */
+.scenTag {
+  display: inline-block;
+  font-size: 10px;
+  color: #888;
+  white-space: nowrap;
+}
+
+.scenBoth {
+  color: #2d6a4f;
+  font-weight: 600;
+}
+
+.scenRna {
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.scenProt {
+  color: #856404;
+  font-weight: 600;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: 48px 0;
+  color: #888;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e8e4dd;
+  border-top-color: #1a2a3a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .compareBar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .scoreCell {
+    min-width: 100px;
+  }
+
+  .scoreBar {
+    width: 50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 8px 12px;
+  }
+
+  .wrapper {
+    border-radius: 8px;
+  }
+
+  .table th,
+  .table td {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .rankBadge {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+  }
+
+  .cellName {
+    font-size: 12px;
+  }
+
+  .scoreBar {
+    width: 40px;
+  }
+
+  .scoreVal {
+    font-size: 11px;
+    min-width: 30px;
+  }
+}

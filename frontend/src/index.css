@@ -1,0 +1,85 @@
+/* ── Global reset & variables ──────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Brand */
+  --clr-primary: #2563eb;
+  --clr-primary-light: #dbeafe;
+  --clr-primary-dark: #1d4ed8;
+
+  /* Status */
+  --clr-success: #16a34a;
+  --clr-success-light: #dcfce7;
+  --clr-warning: #ca8a04;
+  --clr-warning-light: #fef9c3;
+  --clr-danger: #dc2626;
+  --clr-danger-light: #fee2e2;
+
+  /* Neutrals */
+  --clr-bg: #f8fafc;
+  --clr-surface: #ffffff;
+  --clr-border: #e2e8f0;
+  --clr-text: #1e293b;
+  --clr-text-secondary: #64748b;
+  --clr-text-muted: #94a3b8;
+
+  /* Confidence */
+  --clr-conf-high: #16a34a;
+  --clr-conf-mid: #ca8a04;
+  --clr-conf-low: #dc2626;
+
+  /* Spacing */
+  --sp-xs: 4px;
+  --sp-sm: 8px;
+  --sp-md: 16px;
+  --sp-lg: 24px;
+  --sp-xl: 32px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.25rem;
+  --fs-2xl: 1.5rem;
+  --fs-3xl: 1.875rem;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  color: var(--clr-text);
+  background: var(--clr-bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input,
+select {
+  font-family: inherit;
+  font-size: inherit;
+}
