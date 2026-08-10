@@ -6,6 +6,11 @@ hugo_symbol, etc.). DuckDB reads these as DICTIONARY type, which can cause
 ConversionErrors with parameterised queries. We CAST to VARCHAR where needed.
 """
 
+import numpy as np
+import pandas as pd
+from scipy import stats
+
+from app.config import RRF_K
 from app.database import query, query_df
 
 
@@ -192,10 +197,11 @@ def get_diseases() -> list[str]:
         SELECT DISTINCT CAST(primary_disease AS VARCHAR) AS primary_disease
         FROM dim_cell_lines
         WHERE primary_disease IS NOT NULL
+          AND CAST(primary_disease AS VARCHAR) != ''
         ORDER BY primary_disease
         """
     )
-    return [r["primary_disease"] for r in rows]
+    return [r["primary_disease"] for r in rows if r["primary_disease"]]
 
 
 def get_lineages() -> list[str]:
@@ -205,7 +211,187 @@ def get_lineages() -> list[str]:
         SELECT DISTINCT CAST(lineage AS VARCHAR) AS lineage
         FROM dim_cell_lines
         WHERE lineage IS NOT NULL
+          AND CAST(lineage AS VARCHAR) != ''
         ORDER BY lineage
         """
     )
-    return [r["lineage"] for r in rows]
+    return [r["lineage"] for r in rows if r["lineage"]]
+
+
+# ── Evidence breakdown (per-source scoring) ──────────────────
+
+EXPRESSION_SOURCES = [
+    ("DepMap", "fact_expression_depmap"),
+    ("HPA",    "fact_expression_hpa"),
+    ("GEO",    "fact_expression_geo"),
+]
+
+
+def get_evidence_for_cell_line(
+    ach_id: str,
+    genes: list[dict],   # [{"hugo": "EGFR", "ensembl_id": "ENSG...", "direction": "high"}]
+) -> dict:
+    """
+    Compute full evidence breakdown for a single cell line across all queried genes.
+
+    Returns {
+        "genes": {
+            "EGFR": {
+                "direction": "high",
+                "sources": [
+                    {"source": "DepMap", "tpm": 342.7, "z_score": 2.41,
+                     "percentile": 97.8, "z_rank": 3, "pct_rank": 2, "total": 1840},
+                    ...
+                ],
+                "source_count": 3,
+                "expression_rank": 2,
+                "expression_total": 1840,
+            },
+            ...
+        },
+        "protein": {"intensity": 4.82, "z_score": 1.87, "rank": 5, "total": 300},
+        "mutations": [...],
+        "fusions": [...],
+        "data_coverage": {"rna_sources": 3, "has_protein": true, "has_mutations": true, "total_types": 5, "max_types": 5}
+    }
+    """
+    result = {"genes": {}}
+
+    all_mutations = []
+    all_fusions = []
+    has_protein = False
+    total_rna_sources = 0
+
+    for gene in genes:
+        ensg = gene["ensembl_id"]
+        hugo = gene["hugo"]
+        direction = gene.get("direction", "high")
+        ascending = direction == "low"
+
+        gene_data = {
+            "direction": direction,
+            "sources": [],
+            "source_count": 0,
+            "expression_rank": None,
+            "expression_total": 0,
+        }
+
+        # Per-source scoring
+        rank_dict = {}
+        for src_name, src_table in EXPRESSION_SOURCES:
+            df = get_expression_for_gene(ensg, src_table)
+            if len(df) < 2:
+                continue
+
+            tpm_series = df.set_index("ach_id")["tpm"]
+            total_cls = len(tpm_series)
+
+            if ach_id not in tpm_series.index:
+                continue
+
+            tpm_val = float(tpm_series[ach_id])
+
+            # Z-score
+            z_values = stats.zscore(tpm_series, nan_policy="omit")
+            z_series = pd.Series(z_values, index=tpm_series.index) if not isinstance(z_values, pd.Series) else z_values
+            z_val = float(z_series[ach_id])
+
+            # Percentile
+            pct_series = tpm_series.rank(pct=True, method="average")
+            pct_val = float(pct_series[ach_id]) * 100
+
+            # Z-Score rank (rank 1 = best for HIGH, rank 1 = lowest for LOW)
+            z_rank_series = z_series.rank(ascending=ascending, method="min")
+            z_rank = int(z_rank_series[ach_id])
+
+            # Percentile rank
+            pct_rank_series = tpm_series.rank(ascending=ascending, method="min")
+            pct_rank = int(pct_rank_series[ach_id])
+
+            # For RRF ensemble
+            rank_dict[f"{src_name}_zscore"] = z_rank_series
+            rank_dict[f"{src_name}_percentile"] = pct_rank_series
+
+            gene_data["sources"].append({
+                "source": src_name,
+                "tpm": round(tpm_val, 2),
+                "z_score": round(z_val, 2),
+                "percentile": round(pct_val, 1),
+                "z_rank": z_rank,
+                "pct_rank": pct_rank,
+                "total": total_cls,
+            })
+
+        gene_data["source_count"] = len(gene_data["sources"])
+        if gene_data["source_count"] > total_rna_sources:
+            total_rna_sources = gene_data["source_count"]
+
+        # Compute overall expression rank via RRF
+        if rank_dict:
+            all_ids = set()
+            for s in rank_dict.values():
+                all_ids.update(s.index)
+
+            rrf_scores = pd.Series(0.0, index=list(all_ids))
+            for ranks in rank_dict.values():
+                for idx in ranks.index:
+                    rrf_scores[idx] += 1.0 / (RRF_K + ranks[idx])
+
+            rrf_ranked = rrf_scores.rank(ascending=False, method="min")
+            if ach_id in rrf_ranked.index:
+                gene_data["expression_rank"] = int(rrf_ranked[ach_id])
+                gene_data["expression_total"] = len(rrf_ranked)
+
+        # Mutations for this gene + cell line
+        gene_muts = get_mutations_for_gene(ensg)
+        cl_muts = [m for m in gene_muts if m["ach_id"] == ach_id]
+        all_mutations.extend(cl_muts)
+
+        # Fusions for this gene + cell line
+        gene_fusions = get_fusions_for_gene(ensg)
+        cl_fusions = [f for f in gene_fusions if f["ach_id"] == ach_id]
+        all_fusions.extend(cl_fusions)
+
+        result["genes"][hugo] = gene_data
+
+    # Protein (use first gene's ensembl_id for protein lookup)
+    protein_data = None
+    if genes:
+        ensg = genes[0]["ensembl_id"]
+        prot_df = get_protein_for_gene(ensg)
+        if len(prot_df) >= 2:
+            intensity_series = prot_df.set_index("ach_id")["protein_intensity"]
+            if ach_id in intensity_series.index:
+                has_protein = True
+                intensity_val = float(intensity_series[ach_id])
+                z_values = stats.zscore(intensity_series, nan_policy="omit")
+                z_series = pd.Series(z_values, index=intensity_series.index) if not isinstance(z_values, pd.Series) else z_values
+                z_val = float(z_series[ach_id])
+                rank_series = intensity_series.rank(ascending=False, method="min")
+                protein_data = {
+                    "intensity": round(intensity_val, 2),
+                    "z_score": round(z_val, 2),
+                    "rank": int(rank_series[ach_id]),
+                    "total": len(intensity_series),
+                }
+
+    result["protein"] = protein_data
+    result["mutations"] = all_mutations
+    result["fusions"] = all_fusions
+
+    # Data coverage
+    has_mutations = len(all_mutations) > 0
+    has_fusions = len(all_fusions) > 0
+    total_types = total_rna_sources + (1 if has_protein else 0) + (1 if has_mutations else 0)
+    max_types = 3 + 1 + 1  # 3 RNA sources + protein + mutations
+
+    result["data_coverage"] = {
+        "rna_sources": total_rna_sources,
+        "has_protein": has_protein,
+        "has_mutations": has_mutations,
+        "has_fusions": has_fusions,
+        "total_types": total_types,
+        "max_types": max_types,
+    }
+
+    return result
