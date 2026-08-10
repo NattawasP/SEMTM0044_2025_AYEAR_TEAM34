@@ -2,12 +2,49 @@
 Cell line detail and comparison endpoints.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.models import CompareRequest, CellLineDetail
 from app.services import data_service
 
 router = APIRouter(prefix="/api/celllines", tags=["celllines"])
+
+
+@router.get("/{ach_id}/evidence")
+def get_evidence(
+    ach_id: str,
+    genes: str = Query(..., description="Comma-separated HUGO symbols, e.g. EGFR,TP53"),
+    directions: str = Query(..., description="Comma-separated directions matching genes, e.g. high,low"),
+):
+    """
+    Full evidence breakdown for a cell line: per-source Z-scores, percentiles,
+    ranks for each gene, protein z-score, data coverage.
+    """
+    cl = data_service.get_cell_line(ach_id)
+    if cl is None:
+        raise HTTPException(status_code=404, detail=f"Cell line '{ach_id}' not found")
+
+    hugo_list = [g.strip() for g in genes.split(",") if g.strip()]
+    dir_list = [d.strip() for d in directions.split(",") if d.strip()]
+
+    if len(hugo_list) != len(dir_list):
+        raise HTTPException(status_code=400, detail="genes and directions must have the same number of items")
+
+    # Resolve all genes
+    gene_targets = []
+    for hugo, direction in zip(hugo_list, dir_list):
+        info = data_service.resolve_gene(hugo)
+        if info is None:
+            raise HTTPException(status_code=404, detail=f"Gene '{hugo}' not found")
+        gene_targets.append({
+            "hugo": info["hugo_symbol"],
+            "ensembl_id": info["ensembl_id"],
+            "direction": direction,
+        })
+
+    evidence = data_service.get_evidence_for_cell_line(ach_id, gene_targets)
+
+    return {**cl, **evidence}
 
 
 @router.get("/{ach_id}")
