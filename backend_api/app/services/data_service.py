@@ -364,15 +364,33 @@ def get_evidence_for_cell_line(
             if ach_id in intensity_series.index:
                 has_protein = True
                 intensity_val = float(intensity_series[ach_id])
+                total_cls = len(intensity_series)
+
+                # Z-score
                 z_values = stats.zscore(intensity_series, nan_policy="omit")
                 z_series = pd.Series(z_values, index=intensity_series.index) if not isinstance(z_values, pd.Series) else z_values
                 z_val = float(z_series[ach_id])
-                rank_series = intensity_series.rank(ascending=False, method="min")
+
+                # Z-score rank
+                z_rank_series = z_series.rank(ascending=False, method="min")
+                z_rank = int(z_rank_series[ach_id])
+
+                # Percentile
+                pct_series = intensity_series.rank(pct=True, method="average")
+                pct_val = float(pct_series[ach_id]) * 100
+
+                # Percentile rank
+                pct_rank_series = intensity_series.rank(ascending=False, method="min")
+                pct_rank = int(pct_rank_series[ach_id])
+
                 protein_data = {
                     "intensity": round(intensity_val, 2),
                     "z_score": round(z_val, 2),
-                    "rank": int(rank_series[ach_id]),
-                    "total": len(intensity_series),
+                    "z_rank": z_rank,
+                    "percentile": round(pct_val, 1),
+                    "pct_rank": pct_rank,
+                    "rank": z_rank,
+                    "total": total_cls,
                 }
 
     result["protein"] = protein_data

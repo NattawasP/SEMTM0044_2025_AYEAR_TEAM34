@@ -35,6 +35,8 @@ def rank_cell_lines(req: RankRequest):
         lineage_filter=req.lineage_filter,
         core_only=req.core_only,
         top_n=req.top_n,
+        scoring_method=req.scoring_method,
+        sources=req.sources,
     )
 
     return RankResponse(
@@ -48,6 +50,8 @@ def rank_cell_lines(req: RankRequest):
             "lineage_filter": req.lineage_filter,
             "core_only": req.core_only,
             "top_n": req.top_n,
+            "scoring_method": req.scoring_method,
+            "sources": req.sources,
         },
         total_results=len(results),
         results=results,

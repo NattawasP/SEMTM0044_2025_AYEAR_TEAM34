@@ -64,23 +64,36 @@ EXPRESSION_SOURCES = [
 ]
 
 
-def rank_expression(ensembl_id: str) -> tuple[pd.Series, pd.Series]:
+def rank_expression(
+    ensembl_id: str,
+    scoring_method: str = "rrf",
+    enabled_sources: list[str] | None = None,
+) -> tuple[pd.Series, pd.Series]:
     """
-    Compute RRF expression ensemble for one gene.
-    Returns (rrf_scores indexed by ach_id, source_coverage Series).
+    Compute expression ranking for one gene.
+    scoring_method: "rrf" (z-score + percentile ensemble), "zscore" only, "percentile" only.
+    enabled_sources: list of source names to include (e.g. ["depmap", "hpa", "geo"]).
+                     None means all sources.
+    Returns (scores indexed by ach_id, source_coverage Series).
     """
     rank_dict: dict[str, pd.Series] = {}
     source_presence: dict[str, set[str]] = {}
 
     for src_name, src_table in EXPRESSION_SOURCES:
+        # Skip sources not selected by the user
+        if enabled_sources is not None and src_name not in enabled_sources:
+            continue
+
         df = data_service.get_expression_for_gene(ensembl_id, src_table)
         if len(df) < 2:
             continue
 
         tpm = df.set_index("ach_id")["tpm"]
 
-        rank_dict[f"{src_name}_zscore"] = _zscore_rank(tpm)
-        rank_dict[f"{src_name}_percentile"] = _percentile_rank(tpm)
+        if scoring_method in ("rrf", "zscore"):
+            rank_dict[f"{src_name}_zscore"] = _zscore_rank(tpm)
+        if scoring_method in ("rrf", "percentile"):
+            rank_dict[f"{src_name}_percentile"] = _percentile_rank(tpm)
 
         for ach in tpm.index:
             source_presence.setdefault(ach, set()).add(src_name)
@@ -135,11 +148,11 @@ def combine_rna_protein(
             scenario = "RNA+Protein"
             confidence = 1.0
         elif has_rna:
-            score = float(expr_norm[ach])
+            score = w_rna * float(expr_norm[ach])
             scenario = "RNA only"
             confidence = w_rna
         elif has_prot:
-            score = float(prot_norm[ach])
+            score = w_prot * float(prot_norm[ach])
             scenario = "Protein only"
             confidence = w_prot
         else:
@@ -201,6 +214,8 @@ def run_ranking(
     lineage_filter: str | None = None,
     core_only: bool = False,
     top_n: int = 20,
+    scoring_method: str = "rrf",
+    sources: list[str] | None = None,
 ) -> list[dict]:
     """
     Execute the full ranking pipeline. Returns list of ranked cell line dicts.
@@ -212,12 +227,14 @@ def run_ranking(
     for gene in genes:
         ensg = gene["ensembl_id"]
 
-        # 1. Expression ensemble
-        expr_rrf, coverage = rank_expression(ensg)
+        # 1. Expression ensemble (only selected RNA sources)
+        rna_sources = [s for s in (sources or ["depmap", "hpa", "geo"]) if s != "protein"]
+        expr_rrf, coverage = rank_expression(ensg, scoring_method, enabled_sources=rna_sources)
         coverage_per_gene[gene["hugo"]] = coverage
 
-        # 2. Protein
-        prot_rrf = rank_protein(ensg)
+        # 2. Protein (skip if not in selected sources)
+        include_protein = sources is None or "protein" in sources
+        prot_rrf = rank_protein(ensg) if include_protein else pd.Series(dtype=float)
 
         # 3. Combine
         combined = combine_rna_protein(expr_rrf, prot_rrf, w_rna, w_protein)

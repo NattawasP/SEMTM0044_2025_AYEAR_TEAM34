@@ -22,6 +22,11 @@ class RankRequest(BaseModel):
     lineage_filter: str | None = Field(None, description="Filter by lineage")
     core_only: bool = Field(False, description="Only cell lines with data in all 3 expression sources")
     top_n: int = Field(20, ge=1, le=200, description="Number of results to return")
+    scoring_method: str = Field("rrf", pattern="^(rrf|zscore|percentile)$", description="Scoring method: rrf (ensemble), zscore only, percentile only")
+    sources: list[str] = Field(
+        default=["depmap", "hpa", "geo", "protein"],
+        description="Data sources to include in ranking: depmap, hpa, geo, protein"
+    )
 
 
 class CompareRequest(BaseModel):
