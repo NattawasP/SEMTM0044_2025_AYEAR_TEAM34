@@ -1,0 +1,341 @@
+/* ── TestApp layout — identical to App.module.css + scoring toggle ── */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+.header {
+  background: #1a2a3a;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo {
+  font-size: 21px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+
+.logoAccent {
+  color: #f0b429;
+}
+
+.headerTag {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ccc;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.testBadge {
+  background: #f0b429;
+  color: #1a2a3a;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.headerLink {
+  color: #aaa;
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+
+.headerLink:hover {
+  color: #fff;
+}
+
+/* ── Main two-column layout ──────────────────────────────── */
+.main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Left sidebar ────────────────────────────────────────── */
+.sidebar {
+  width: 370px;
+  min-width: 300px;
+  background: var(--clr-surface);
+  border-right: 1px solid #e8e4dd;
+  overflow-y: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarSection {
+  padding: 20px 22px;
+  border-bottom: 1px solid #f0ede8;
+}
+
+.sidebarSection:last-child {
+  border-bottom: none;
+}
+
+.sidebarTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--clr-text);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Scoring Method Toggle (TEST FEATURE) ────────────────── */
+.testTag {
+  background: #f0b429;
+  color: #1a2a3a;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.methodToggle {
+  display: flex;
+  border: 2px solid #f0b429;
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: var(--clr-surface, #fafaf8);
+}
+
+.methodBtn {
+  flex: 1;
+  padding: 10px 6px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.methodBtn:not(:last-child) {
+  border-right: 1px solid #e8e4dd;
+}
+
+.methodActive {
+  background: #f0b429;
+  color: #1a2a3a;
+}
+
+.methodHint {
+  font-size: 11px;
+  color: #888;
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+/* ── Method label in results header ──────────────────────── */
+.methodLabel {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 10px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.method_rrf {
+  background: #e8f4e8;
+  color: #2d6a4f;
+}
+
+.method_zscore {
+  background: #e6f1fb;
+  color: #185fa5;
+}
+
+.method_percentile {
+  background: #fef3cd;
+  color: #856404;
+}
+
+/* ── Search button ───────────────────────────────────────── */
+.searchBtn {
+  width: 100%;
+  padding: 12px;
+  background: #1a2a3a;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.searchBtn:hover:not(:disabled) {
+  background: #2a4a6c;
+}
+
+.searchBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Error message */
+.error {
+  padding: var(--sp-sm) var(--sp-md);
+  background: var(--clr-danger-light);
+  color: var(--clr-danger);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  margin-top: var(--sp-sm);
+}
+
+/* ── Right content area ──────────────────────────────────── */
+.content {
+  flex: 1;
+  padding: 24px 28px;
+  overflow-y: auto;
+  background: var(--clr-bg);
+  min-width: 0;
+}
+
+/* Results header row */
+.resultsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resultsTitle {
+  font-size: 17px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+}
+
+.resultsMeta {
+  font-size: 12px;
+  color: #888;
+}
+
+.resultsMeta b {
+  color: #2d6a4f;
+}
+
+/* Empty state */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60%;
+  min-height: 200px;
+  color: var(--clr-text-muted);
+  text-align: center;
+  gap: var(--sp-md);
+  padding: var(--sp-lg);
+}
+
+.emptyIcon {
+  font-size: 48px;
+  opacity: 0.4;
+}
+
+.emptyTitle {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+}
+
+.emptyText {
+  font-size: var(--fs-sm);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 320px;
+    min-width: 260px;
+  }
+  .content {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    border-right: none;
+    border-bottom: 1px solid #e8e4dd;
+  }
+  .content {
+    padding: 16px;
+  }
+  .header {
+    padding: 12px 16px;
+  }
+  .headerTag {
+    display: none;
+  }
+  .resultsHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 10px 12px;
+  }
+  .logo {
+    font-size: 18px;
+  }
+  .headerRight {
+    display: none;
+  }
+  .sidebarSection {
+    padding: 16px 14px;
+  }
+  .content {
+    padding: 12px;
+  }
+}

@@ -31,6 +31,28 @@
   color: var(--clr-text-secondary);
 }
 
+/* Data source checkboxes */
+.sourceChecks {
+  display: flex;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.sourceCheck {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sourceCheck input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--clr-primary);
+}
+
 /* Mode toggle (Ignore / Include / Exclude) */
 .modeToggle {
   display: flex;

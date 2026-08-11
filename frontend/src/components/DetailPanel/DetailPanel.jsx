@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getCellLineEvidence } from "../../api";
 import styles from "./DetailPanel.module.css";
 
-export default function DetailPanel({ achId, genes, resultRow, onClose }) {
+export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "rrf", onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -89,7 +89,11 @@ export default function DetailPanel({ achId, genes, resultRow, onClose }) {
                       <div className={styles.geneCardRank}>No expression data</div>
                     )}
                     <div className={styles.geneCardSub}>
-                      RRF ensemble across {gd.source_count} source{gd.source_count !== 1 ? "s" : ""} × 2 methods
+                      {scoringMethod === "rrf"
+                        ? `RRF ensemble across ${gd.source_count} source${gd.source_count !== 1 ? "s" : ""} × 2 methods`
+                        : scoringMethod === "zscore"
+                        ? `Z-Score ranking across ${gd.source_count} source${gd.source_count !== 1 ? "s" : ""}`
+                        : `Percentile ranking across ${gd.source_count} source${gd.source_count !== 1 ? "s" : ""}`}
                     </div>
                     <div className={styles.geneCardSub}>
                       Sources:{" "}
@@ -106,18 +110,18 @@ export default function DetailPanel({ achId, genes, resultRow, onClose }) {
                 );
               })}
 
-              {/* Protein card */}
+              {/* Protein summary card */}
               {data.protein && (
                 <div className={styles.geneCard}>
                   <div className={styles.geneCardHeader}>
                     <span className={styles.geneCardLabel}>Protein Detection</span>
                   </div>
                   <div className={styles.geneCardRank}>
-                    {genes[0]?.hugo}: Intensity {data.protein.intensity}
+                    Rank #{data.protein.z_rank}{" "}
+                    <span className={styles.rankTotal}>/ {data.protein.total?.toLocaleString()}</span>
                   </div>
                   <div className={styles.geneCardSub}>
-                    z-score: {data.protein.z_score > 0 ? "+" : ""}
-                    {data.protein.z_score} · Gygi proteomics
+                    {genes[0]?.hugo}: Intensity {data.protein.intensity} · Gygi proteomics
                   </div>
                   <div className={`${styles.geneCardSub} ${styles.proteinConfirm}`}>
                     Confirmed at protein level ✓
@@ -143,26 +147,71 @@ export default function DetailPanel({ achId, genes, resultRow, onClose }) {
                           <span>TPM</span>
                           <span className={styles.val}>{src.tpm}</span>
                         </div>
-                        <div className={styles.sourceRow}>
-                          <span>Z-Score</span>
-                          <span className={styles.val}>
-                            {src.z_score > 0 ? "+" : ""}{src.z_score}
-                          </span>
-                        </div>
-                        <div className={styles.sourceRow}>
-                          <span>Percentile</span>
-                          <span className={styles.val}>{src.percentile}%</span>
-                        </div>
-                        <div className={styles.sourceRow}>
-                          <span>Z-Score Rank</span>
-                          <span className={styles.val}>#{src.z_rank}</span>
-                        </div>
-                        <div className={styles.sourceRow}>
-                          <span>Percentile Rank</span>
-                          <span className={styles.val}>#{src.pct_rank}</span>
-                        </div>
+                        {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                          <div className={styles.sourceRow}>
+                            <span>Z-Score</span>
+                            <span className={styles.val}>
+                              {src.z_score > 0 ? "+" : ""}{src.z_score}
+                            </span>
+                          </div>
+                        )}
+                        {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                          <div className={styles.sourceRow}>
+                            <span>Percentile</span>
+                            <span className={styles.val}>{src.percentile}%</span>
+                          </div>
+                        )}
+                        {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                          <div className={styles.sourceRow}>
+                            <span>Z-Score Rank</span>
+                            <span className={styles.val}>#{src.z_rank}</span>
+                          </div>
+                        )}
+                        {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                          <div className={styles.sourceRow}>
+                            <span>Percentile Rank</span>
+                            <span className={styles.val}>#{src.pct_rank}</span>
+                          </div>
+                        )}
                       </div>
                     ))}
+
+                    {/* Protein source card — show alongside expression sources */}
+                    {data.protein && (
+                      <div className={styles.sourceCard}>
+                        <h5 className={styles.sourceTitle}>Protein (Gygi)</h5>
+                        <div className={styles.sourceRow}>
+                          <span>Intensity</span>
+                          <span className={styles.val}>{data.protein.intensity}</span>
+                        </div>
+                        {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                          <div className={styles.sourceRow}>
+                            <span>Z-Score</span>
+                            <span className={styles.val}>
+                              {data.protein.z_score > 0 ? "+" : ""}{data.protein.z_score}
+                            </span>
+                          </div>
+                        )}
+                        {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                          <div className={styles.sourceRow}>
+                            <span>Percentile</span>
+                            <span className={styles.val}>{data.protein.percentile}%</span>
+                          </div>
+                        )}
+                        {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                          <div className={styles.sourceRow}>
+                            <span>Z-Score Rank</span>
+                            <span className={styles.val}>#{data.protein.z_rank}</span>
+                          </div>
+                        )}
+                        {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                          <div className={styles.sourceRow}>
+                            <span>Percentile Rank</span>
+                            <span className={styles.val}>#{data.protein.pct_rank}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -256,9 +305,15 @@ export default function DetailPanel({ achId, genes, resultRow, onClose }) {
             <div className={styles.methodInfo}>
               <h4 className={styles.methodTitle}>Scoring Method</h4>
               <p className={styles.methodText}>
-                Expression ranked via <code>Z-Score</code> +{" "}
-                <code>Percentile</code> per source (DepMap, HPA, GEO),
-                combined with <code>Reciprocal Rank Fusion</code> (k=60).
+                {scoringMethod === "rrf" && (
+                  <>Expression ranked via <code>Z-Score</code> + <code>Percentile</code> per source (DepMap, HPA, GEO), combined with <code>Reciprocal Rank Fusion</code> (k=60).</>
+                )}
+                {scoringMethod === "zscore" && (
+                  <>Expression ranked via <code>Z-Score</code> only per source (DepMap, HPA, GEO), combined with <code>Reciprocal Rank Fusion</code> (k=60).</>
+                )}
+                {scoringMethod === "percentile" && (
+                  <>Expression ranked via <code>Percentile</code> only per source (DepMap, HPA, GEO), combined with <code>Reciprocal Rank Fusion</code> (k=60).</>
+                )}
                 {data.protein && (
                   <> Protein scored separately, combined with RNA at configurable weighting.</>
                 )}

@@ -5,7 +5,7 @@ import ResultsTable from "./components/ResultsTable/ResultsTable.jsx";
 import DetailPanel from "./components/DetailPanel/DetailPanel.jsx";
 import CompareView from "./components/CompareView/CompareView.jsx";
 import { rankCellLines } from "./api";
-import styles from "./App.module.css";
+import styles from "./TestApp.module.css";
 
 const DEFAULT_FILTERS = {
   w_rna: 0.7,
@@ -19,10 +19,17 @@ const DEFAULT_FILTERS = {
   sources: ["depmap", "hpa", "geo", "protein"],
 };
 
-export default function App() {
+const SCORING_METHODS = [
+  { value: "rrf", label: "RRF Ensemble" },
+  { value: "zscore", label: "Z-Score Only" },
+  { value: "percentile", label: "Percentile Only" },
+];
+
+export default function TestApp() {
   /* Search state */
   const [genes, setGenes] = useState([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [scoringMethod, setScoringMethod] = useState("rrf");
 
   /* Results state */
   const [results, setResults] = useState(null);
@@ -43,7 +50,7 @@ export default function App() {
     setGenes((prev) => prev.filter((g) => g.hugo !== hugo));
   }, []);
 
-  /* Run ranking */
+  /* Run ranking — passes scoring_method */
   async function handleSearch() {
     if (genes.length === 0) return;
     setLoading(true);
@@ -55,6 +62,7 @@ export default function App() {
       const res = await rankCellLines({
         genes: genes.map((g) => ({ hugo: g.hugo, direction: g.direction })),
         ...filters,
+        scoring_method: scoringMethod,
       });
       setResults(res.results);
     } catch (err) {
@@ -84,6 +92,8 @@ export default function App() {
     setSelected(selectAll ? results.map((r) => r.ach_id) : []);
   }
 
+  const methodLabel = SCORING_METHODS.find((m) => m.value === scoringMethod)?.label;
+
   return (
     <div className={styles.app}>
       {/* ── Header ── */}
@@ -92,13 +102,11 @@ export default function App() {
           <div className={styles.logo}>
             Cell<span className={styles.logoAccent}>Line</span>Finder
           </div>
+          <span className={styles.testBadge}>TEST MODE</span>
           <span className={styles.headerTag}>v2.0 · Bristol × AstraZeneca</span>
         </div>
         <div className={styles.headerRight}>
-          <a className={styles.headerLink} href="#">Documentation</a>
-          <a className={styles.headerLink} href="#">Data Sources</a>
-          <a className={styles.headerLink} href="#">Methods</a>
-          <a className={styles.headerLink} href="#">About</a>
+          <a className={styles.headerLink} href="/">← Back to Main App</a>
         </div>
       </header>
 
@@ -108,6 +116,29 @@ export default function App() {
           <div className={styles.sidebarSection}>
             <h2 className={styles.sidebarTitle}>Search Query</h2>
             <SearchBar genes={genes} onAddGene={addGene} onRemoveGene={removeGene} />
+          </div>
+
+          {/* ── Scoring Method Toggle (TEST FEATURE) ── */}
+          <div className={styles.sidebarSection}>
+            <h2 className={styles.sidebarTitle}>
+              Scoring Method <span className={styles.testTag}>TEST</span>
+            </h2>
+            <div className={styles.methodToggle}>
+              {SCORING_METHODS.map((m) => (
+                <button
+                  key={m.value}
+                  className={`${styles.methodBtn} ${scoringMethod === m.value ? styles.methodActive : ""}`}
+                  onClick={() => setScoringMethod(m.value)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <p className={styles.methodHint}>
+              <b>RRF</b> = Z-Score + Percentile combined via Reciprocal Rank Fusion (default).
+              <b> Z-Score</b> = standard deviations from mean only.
+              <b> Percentile</b> = position in distribution only.
+            </p>
           </div>
 
           <div className={styles.sidebarSection}>
@@ -130,10 +161,15 @@ export default function App() {
         <main className={styles.content}>
           {results && results.length > 0 && (
             <div className={styles.resultsHeader}>
-              <h2 className={styles.resultsTitle}>Results</h2>
+              <h2 className={styles.resultsTitle}>
+                Results
+                <span className={`${styles.methodLabel} ${styles[`method_${scoringMethod}`]}`}>
+                  {methodLabel}
+                </span>
+              </h2>
               <span className={styles.resultsMeta}>
                 Showing <b>{results.length}</b> cell lines · Ranked by{" "}
-                <b>Z-Score + Percentile RRF</b>
+                <b>{methodLabel}</b>
               </span>
             </div>
           )}
@@ -143,7 +179,7 @@ export default function App() {
               <div className={styles.emptyIcon}>🔬</div>
               <div className={styles.emptyTitle}>Add genes to begin</div>
               <p className={styles.emptyText}>
-                Search for target genes on the left, set your filters, then click
+                Search for target genes on the left, pick a scoring method, then click
                 "Find Cell Lines" to rank cell lines by multi-omics expression.
               </p>
             </div>
@@ -166,6 +202,7 @@ export default function App() {
           achId={detailId}
           genes={genes}
           resultRow={results?.find((r) => r.ach_id === detailId)}
+          scoringMethod={scoringMethod}
           onClose={() => setDetailId(null)}
         />
       )}

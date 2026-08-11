@@ -4,6 +4,13 @@ import styles from "./FilterPanel.module.css";
 
 const MODE_OPTIONS = ["ignore", "include", "exclude"];
 
+const DATA_SOURCES = [
+  { key: "depmap", label: "DepMap" },
+  { key: "hpa", label: "HPA" },
+  { key: "geo", label: "GEO" },
+  { key: "protein", label: "Protein" },
+];
+
 export default function FilterPanel({ filters, onChange }) {
   const [diseases, setDiseases] = useState([]);
   const [lineages, setLineages] = useState([]);
@@ -27,6 +34,34 @@ export default function FilterPanel({ filters, onChange }) {
       <h3 className={styles.title}>Filters & Options</h3>
 
       <div className={styles.grid}>
+        {/* Data sources to include */}
+        <div className={styles.field}>
+          <label className={styles.label}>Data Sources</label>
+          <div className={styles.sourceChecks}>
+            {DATA_SOURCES.map((src) => {
+              const sources = filters.sources || ["depmap", "hpa", "geo", "protein"];
+              const checked = sources.includes(src.key);
+              return (
+                <label key={src.key} className={styles.sourceCheck}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      const next = e.target.checked
+                        ? [...sources, src.key]
+                        : sources.filter((s) => s !== src.key);
+                      // Prevent unchecking all sources
+                      if (next.length === 0) return;
+                      onChange({ ...filters, sources: next });
+                    }}
+                  />
+                  {src.label}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Mutation mode */}
         <div className={styles.field}>
           <label className={styles.label}>Mutation Filter</label>
@@ -107,7 +142,7 @@ export default function FilterPanel({ filters, onChange }) {
             type="range"
             className={styles.slider}
             min="50"
-            max="95"
+            max="100"
             step="5"
             value={Math.round(filters.w_rna * 100)}
             onChange={(e) => {
