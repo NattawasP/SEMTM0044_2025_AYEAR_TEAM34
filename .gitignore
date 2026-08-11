@@ -13,7 +13,7 @@ data/processed/
 data/
 *.csv
 *.tsv
-*.txt
+# *.txt
 *.xlsx
 *.parquet
 *.gz
