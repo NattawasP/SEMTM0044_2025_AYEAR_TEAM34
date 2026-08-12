@@ -19,7 +19,7 @@ data/
 *.gz
 *.zip
 *.gct
-*.json
+# *.json
 *.pkl
 
 # Allow small mapping/config files if needed
