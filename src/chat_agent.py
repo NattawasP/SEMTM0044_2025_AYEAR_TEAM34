@@ -44,10 +44,16 @@ Limitation acknowledgment:
   * Suggest they check Q1/Q2 modules directly
 
 Tools:
+- get_gene_context: AZ notes on a target gene (CALL FIRST when gene is mentioned)
 - lookup_cell_line: get info on one cell
 - search_by_lineage: find cells by tissue/disease
 - check_assay_compatibility: check if cells work for an assay
 - list_options: see valid values
+
+Standard workflows:
+- Gene query: get_gene_context → search_by_lineage → answer
+- Cell lookup: lookup_cell_line → answer
+- Assay query: search_by_lineage → check_assay_compatibility → answer
 """
 
 
@@ -56,13 +62,13 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "search_by_lineage",
-            "description": "Search cells by lineage, disease, or subtype",
+            "description": "Search cells by lineage, disease, or subtype. Returns top N cells ranked by hierarchical match score (1.0=exact subtype+lineage, 0.75=same disease, 0.50=same lineage). Provide at least one of lineage/disease/subtype.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "lineage": {"type": "string"},
-                    "disease": {"type": "string"},
-                    "subtype": {"type": "string"},
+                    "lineage": {"type": "string", "description": "Tissue lowercase e.g. 'lung', 'breast'"},
+                    "disease": {"type": "string", "description": "Full DepMap disease name e.g. 'Lung Cancer'"},
+                    "subtype": {"type": "string", "description": "Full DepMap subtype e.g. 'Non-Small Cell Lung Cancer (NSCLC), Adenocarcinoma'"},
                     "top_n": {"type": "integer", "default": 10}
                 }
             }
@@ -72,13 +78,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "check_assay_compatibility",
-            "description": "Check if cells work for an assay",
+            "description": "Check if cells work for an assay. Returns OK/WARN status per cell. Cell_names MUST be non-empty, pass results from search_by_lineage first.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "cell_names": {"type": "array", "items": {"type": "string"}},
-                    "assay_type": {"type": "string",
-                        "enum": ["adherent_screen", "3d_spheroid", "suspension_screen", "flexible"]}
+                    "assay_type": {"type": "string","enum": ["adherent_screen", "3d_spheroid", "suspension_screen", "flexible"]}
                 },
                 "required": ["cell_names", "assay_type"]
             }
@@ -88,11 +93,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "lookup_cell_line",
-            "description": "Get info on one specific cell line",
+            "description": "Get full metadata (lineage, disease, subtype, growth pattern, sex, age, source) for one specific cell line by name or ACH-ID.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "name_or_id": {"type": "string"}
+                    "name_or_id": {"type": "string", "description": "Cell name (e.g. 'HCC827') or ACH-ID (e.g. 'ACH-000012')"}
                 },
                 "required": ["name_or_id"]
             }
@@ -102,7 +107,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "list_options",
-            "description": "List valid values for a category",
+            "description": "List valid values for a category. Call when unsure what values exist (e.g. before search_by_lineage to find valid lineage names).",
             "parameters": {
                 "type": "object",
                 "properties": {

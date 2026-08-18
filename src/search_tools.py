@@ -14,6 +14,8 @@ def search_by_lineage(lineage=None, disease=None, subtype=None, top_n=10):
     return top.to_dict('records')
 
 def check_assay_compatibility(cell_names, assay_type):
+    if not cell_names:
+        return {'error': 'cell_names is empty. Call search_by_lineage first to get cells.'}
     q7 = check_q7_warnings(dim, assay_type)
     subset = q7[q7['cell_line_name'].isin(cell_names)]
     return subset.to_dict('records')
@@ -39,3 +41,4 @@ def list_options(category):
     if category == 'assays':
         return list(ASSAY_PROFILES.keys())
     return {'error': 'Unknown category'}
+
