@@ -44,13 +44,18 @@ export function getCellLineDetail(achId, gene) {
 
 /**
  * Get full evidence breakdown for a cell line across all queried genes.
- * Returns per-source Z-scores, percentiles, ranks, protein z-score, data coverage.
+ * Returns per-source Z-scores, percentiles, ranks, protein z-score, data coverage,
+ * and per-source combined scores using the given RNA/Protein weights.
  */
-export function getCellLineEvidence(achId, genes) {
+export function getCellLineEvidence(achId, genes, wRna = 0.7, wProtein = 0.3) {
   const hugos = genes.map((g) => g.hugo).join(",");
   const dirs = genes.map((g) => g.direction).join(",");
   return request(
-    `${BASE}/celllines/${encodeURIComponent(achId)}/evidence?genes=${encodeURIComponent(hugos)}&directions=${encodeURIComponent(dirs)}`
+    `${BASE}/celllines/${encodeURIComponent(achId)}/evidence` +
+      `?genes=${encodeURIComponent(hugos)}` +
+      `&directions=${encodeURIComponent(dirs)}` +
+      `&w_rna=${encodeURIComponent(wRna)}` +
+      `&w_protein=${encodeURIComponent(wProtein)}`
   );
 }
 

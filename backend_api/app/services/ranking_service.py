@@ -8,6 +8,15 @@ Pipeline:
   4. Mutation/Fusion hard filter (include/exclude/ignore)
   5. Multi-gene combination via RRF
   6. Optional post-filters (disease, lineage, core-only)
+
+Note on RRF averaging:
+  When fusing the per-source expression ranks, we AVERAGE the RRF contributions
+  (divide by the number of rank lists that actually cover each cell line) instead
+  of summing them. This prevents cell lines that are missing a data source (e.g.
+  no GEO) from being penalised: a cell line with very high RNA in the 2 sources
+  it has is judged on the quality of those ranks, not on how many sources exist.
+  Coverage is surfaced separately (source_count / is_core) so users who want
+  multi-source validation can filter for it instead of it being baked into score.
 """
 
 import numpy as np
@@ -32,16 +41,32 @@ def _percentile_rank(series: pd.Series) -> pd.Series:
     return pct.rank(ascending=False, method="min")
 
 
-def _rrf(rank_dict: dict[str, pd.Series], k: int = RRF_K) -> pd.Series:
-    """Reciprocal Rank Fusion across multiple rank Series."""
+def _rrf(rank_dict: dict[str, pd.Series], k: int = RRF_K, average: bool = False) -> pd.Series:
+    """
+    Reciprocal Rank Fusion across multiple rank Series.
+
+    average=False (default): raw sum of 1/(k+rank) — used for multi-gene fusion.
+    average=True: divide each cell line's summed score by the number of rank
+                  lists that actually covered it. This makes cell lines with
+                  fewer data sources comparable to those with more, so a strong
+                  cell line missing one source is not pushed down the ranking.
+    """
     all_ids: set[str] = set()
     for s in rank_dict.values():
         all_ids.update(s.index)
 
     scores = pd.Series(0.0, index=list(all_ids))
+    counts = pd.Series(0, index=list(all_ids))
     for ranks in rank_dict.values():
         for idx in ranks.index:
             scores[idx] += 1.0 / (k + ranks[idx])
+            counts[idx] += 1
+
+    if average:
+        # Avoid division by zero; counts is >= 1 wherever scores was touched.
+        counts = counts.replace(0, 1)
+        scores = scores / counts
+
     return scores
 
 
@@ -101,7 +126,9 @@ def rank_expression(
     if not rank_dict:
         return pd.Series(dtype=float), pd.Series(dtype=int)
 
-    rrf = _rrf(rank_dict)
+    # Average RRF across source/method rank lists so cell lines with fewer
+    # sources are not penalised for missing data.
+    rrf = _rrf(rank_dict, average=True)
     coverage = pd.Series({ach: len(srcs) for ach, srcs in source_presence.items()})
     return rrf, coverage
 
@@ -119,7 +146,9 @@ def rank_protein(ensembl_id: str) -> pd.Series:
         "protein_zscore": _zscore_rank(intensity),
         "protein_percentile": _percentile_rank(intensity),
     }
-    return _rrf(rank_dict)
+    # Protein has a single source; averaging vs summing gives the same ordering,
+    # but we average for consistency with the expression side.
+    return _rrf(rank_dict, average=True)
 
 
 # ── Combine RNA + Protein (4 scenarios) ──────────────────────
@@ -262,7 +291,9 @@ def run_ranking(
             df_g["gene_rank"] = range(1, len(df_g) + 1)
             gene_ranks[gene["hugo"]] = df_g.set_index("ach_id")["gene_rank"]
 
-        multi_rrf = _rrf(gene_ranks)
+        # Multi-gene fusion keeps raw-sum RRF (a cell line strong across MORE
+        # genes should rank higher — that is the intended behaviour here).
+        multi_rrf = _rrf(gene_ranks, average=False)
 
         rows = []
         for ach in multi_rrf.index:

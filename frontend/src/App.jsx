@@ -166,6 +166,8 @@ export default function App() {
           achId={detailId}
           genes={genes}
           resultRow={results?.find((r) => r.ach_id === detailId)}
+          wRna={filters.w_rna}
+          wProtein={filters.w_protein}
           onClose={() => setDetailId(null)}
         />
       )}

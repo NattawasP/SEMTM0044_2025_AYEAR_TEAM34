@@ -37,12 +37,6 @@ export default function ResultsTable({
     return styles.fillLow;
   }
 
-  function confidenceClass(conf) {
-    if (conf >= 0.8) return styles.confHigh;
-    if (conf >= 0.5) return styles.confMid;
-    return styles.confLow;
-  }
-
   function scenarioClass(scenario) {
     if (scenario.includes("RNA+Protein")) return styles.scenBoth;
     if (scenario.includes("RNA only")) return styles.scenRna;
@@ -85,7 +79,6 @@ export default function ResultsTable({
               <th>Cell Line</th>
               <th>Disease</th>
               <th>Score</th>
-              <th>Confidence</th>
               <th>Scenario</th>
             </tr>
           </thead>
@@ -126,11 +119,6 @@ export default function ResultsTable({
                       </div>
                       <span className={styles.scoreVal}>{r.score.toFixed(4)}</span>
                     </div>
-                  </td>
-                  <td>
-                    <span className={`${styles.confBadge} ${confidenceClass(r.confidence)}`}>
-                      {r.confidence.toFixed(1)}
-                    </span>
                   </td>
                   <td>
                     <span className={`${styles.scenTag} ${scenarioClass(r.scenario)}`}>

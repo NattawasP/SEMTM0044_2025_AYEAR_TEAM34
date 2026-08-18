@@ -2,27 +2,31 @@ import { useState, useEffect } from "react";
 import { getCellLineEvidence } from "../../api";
 import styles from "./DetailPanel.module.css";
 
-export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "rrf", onClose }) {
+export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "rrf", wRna = 0.7, wProtein = 0.3, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!achId || genes.length === 0) return;
     setLoading(true);
-    getCellLineEvidence(achId, genes)
+    getCellLineEvidence(achId, genes, wRna, wProtein)
       .then(setData)
       .catch((err) => {
         console.error("Evidence fetch error:", err);
         setData(null);
       })
       .finally(() => setLoading(false));
-  }, [achId, genes]);
+  }, [achId, genes, wRna, wProtein]);
 
   if (!achId) return null;
 
   const score = resultRow?.score;
   const confidence = resultRow?.confidence;
   const scenario = resultRow?.scenario;
+
+  // Per-source combined scores (w_rna*RNA_source + w_protein*Protein), same scale
+  // as overall score. Keyed by display name: { DepMap: 0.89, HPA: 0.85, GEO: 0.82 }
+  const sourceScores = data?.source_scores || {};
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -140,41 +144,50 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                     Source-Level Scores — {g.hugo}
                   </h4>
                   <div className={styles.sourceGrid}>
-                    {gd.sources.map((src) => (
-                      <div key={src.source} className={styles.sourceCard}>
-                        <h5 className={styles.sourceTitle}>{src.source}</h5>
-                        <div className={styles.sourceRow}>
-                          <span>TPM</span>
-                          <span className={styles.val}>{src.tpm}</span>
+                    {gd.sources.map((src) => {
+                      const combined = sourceScores[src.source];
+                      return (
+                        <div key={src.source} className={styles.sourceCard}>
+                          <h5 className={styles.sourceTitle}>{src.source}</h5>
+                          <div className={styles.sourceRow}>
+                            <span>TPM</span>
+                            <span className={styles.val}>{src.tpm}</span>
+                          </div>
+                          {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                            <div className={styles.sourceRow}>
+                              <span>Z-Score</span>
+                              <span className={styles.val}>
+                                {src.z_score > 0 ? "+" : ""}{src.z_score}
+                              </span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                            <div className={styles.sourceRow}>
+                              <span>Percentile</span>
+                              <span className={styles.val}>{src.percentile}%</span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                            <div className={styles.sourceRow}>
+                              <span>Z-Score Rank</span>
+                              <span className={styles.val}>#{src.z_rank}</span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                            <div className={styles.sourceRow}>
+                              <span>Percentile Rank</span>
+                              <span className={styles.val}>#{src.pct_rank}</span>
+                            </div>
+                          )}
+                          {combined != null && (
+                            <div className={`${styles.sourceRow} ${styles.sourceScoreRow}`}>
+                              <span>Score</span>
+                              <span className={styles.val}>{combined.toFixed(4)}</span>
+                            </div>
+                          )}
                         </div>
-                        {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
-                          <div className={styles.sourceRow}>
-                            <span>Z-Score</span>
-                            <span className={styles.val}>
-                              {src.z_score > 0 ? "+" : ""}{src.z_score}
-                            </span>
-                          </div>
-                        )}
-                        {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
-                          <div className={styles.sourceRow}>
-                            <span>Percentile</span>
-                            <span className={styles.val}>{src.percentile}%</span>
-                          </div>
-                        )}
-                        {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
-                          <div className={styles.sourceRow}>
-                            <span>Z-Score Rank</span>
-                            <span className={styles.val}>#{src.z_rank}</span>
-                          </div>
-                        )}
-                        {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
-                          <div className={styles.sourceRow}>
-                            <span>Percentile Rank</span>
-                            <span className={styles.val}>#{src.pct_rank}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Protein source card — show alongside expression sources */}
                     {data.protein && (
@@ -315,13 +328,13 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                   <>Expression ranked via <code>Percentile</code> only per source (DepMap, HPA, GEO), combined with <code>Reciprocal Rank Fusion</code> (k=60).</>
                 )}
                 {data.protein && (
-                  <> Protein scored separately, combined with RNA at configurable weighting.</>
+                  <> Protein scored separately, combined with RNA at the selected weighting.</>
                 )}
                 {genes.length > 1 && (
                   <> Multi-gene combination via RRF across gene-specific ranks.</>
                 )}
-                {" "}Confidence reflects data availability (1.0 = both RNA + Protein,
-                0.7 = RNA only, 0.3 = Protein only).
+                {" "}Per-source scores use the selected RNA/Protein weights on the
+                same scale as the overall score.
               </p>
             </div>
 

@@ -70,4 +70,4 @@ Thumbs.db
 .env
 .env.local
 *.key
-credentials.json
+credentials.jsonnode_modules/

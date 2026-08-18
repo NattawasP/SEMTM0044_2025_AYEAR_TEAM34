@@ -6,8 +6,76 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.models import CompareRequest, CellLineDetail
 from app.services import data_service
+from app.services import ranking_service
 
 router = APIRouter(prefix="/api/celllines", tags=["celllines"])
+
+
+# RNA sources we surface per-source scores for (name shown in UI -> internal source key)
+_RNA_SOURCES = [("DepMap", "depmap"), ("HPA", "hpa"), ("GEO", "geo")]
+
+
+def _per_source_scores(
+    ach_id: str,
+    gene_targets: list[dict],
+    w_rna: float,
+    w_protein: float,
+) -> dict:
+    """
+    Compute a per-source combined score for the clicked cell line.
+
+    For each RNA source (DepMap / HPA / GEO) we run the SAME ranking pipeline
+    used for the overall score, but with only that one RNA source enabled
+    (protein always included). Because it reuses run_ranking(), the resulting
+    score is on the same 0-1 scale as the overall score shown at the top of
+    the panel. Uses the same RNA/Protein weights the user selected.
+
+    Only returns a score for sources the cell line actually has RNA data in,
+    so a source with no data (e.g. no GEO) is omitted rather than showing a
+    protein-only value.
+
+    Returns { "DepMap": 0.89, "HPA": 0.85 } (GEO omitted if no data).
+    """
+    # Which RNA sources does this cell line actually have data in?
+    have_sources = set()
+    for display_name, src_key in _RNA_SOURCES:
+        table = {
+            "depmap": "fact_expression_depmap",
+            "hpa": "fact_expression_hpa",
+            "geo": "fact_expression_geo",
+        }[src_key]
+        ensg = gene_targets[0]["ensembl_id"]
+        df = data_service.get_expression_for_gene(ensg, table)
+        if len(df) > 0 and (df["ach_id"] == ach_id).any():
+            have_sources.add(src_key)
+
+    result: dict[str, float] = {}
+
+    for display_name, src_key in _RNA_SOURCES:
+        # Skip sources this cell line has no RNA data in
+        if src_key not in have_sources:
+            continue
+
+        try:
+            ranked = ranking_service.run_ranking(
+                genes=gene_targets,
+                w_rna=w_rna,
+                w_protein=w_protein,
+                mutation_mode="ignore",
+                fusion_mode="ignore",
+                top_n=100000,                 # no cutoff: we need the clicked cell line
+                scoring_method="rrf",
+                sources=[src_key, "protein"], # this one RNA source + protein only
+            )
+        except Exception:
+            continue
+
+        for row in ranked:
+            if row["ach_id"] == ach_id:
+                result[display_name] = row["score"]
+                break
+
+    return result
 
 
 @router.get("/{ach_id}/evidence")
@@ -15,10 +83,14 @@ def get_evidence(
     ach_id: str,
     genes: str = Query(..., description="Comma-separated HUGO symbols, e.g. EGFR,TP53"),
     directions: str = Query(..., description="Comma-separated directions matching genes, e.g. high,low"),
+    w_rna: float = Query(0.7, description="RNA weight used for per-source scores"),
+    w_protein: float = Query(0.3, description="Protein weight used for per-source scores"),
 ):
     """
     Full evidence breakdown for a cell line: per-source Z-scores, percentiles,
-    ranks for each gene, protein z-score, data coverage.
+    ranks for each gene, protein z-score, data coverage, and per-source
+    combined scores (w_rna*RNA_source + w_protein*Protein, same scale as
+    overall score).
     """
     cl = data_service.get_cell_line(ach_id)
     if cl is None:
@@ -43,6 +115,10 @@ def get_evidence(
         })
 
     evidence = data_service.get_evidence_for_cell_line(ach_id, gene_targets)
+
+    # Per-source combined scores (same scale as the overall score), using the
+    # user's selected RNA/Protein weights.
+    evidence["source_scores"] = _per_source_scores(ach_id, gene_targets, w_rna, w_protein)
 
     return {**cl, **evidence}
 
