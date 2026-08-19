@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getCellLineEvidence } from "../../api";
 import styles from "./DetailPanel.module.css";
 
-export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "rrf", wRna = 0.7, wProtein = 0.3, onClose }) {
+export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "rrf", maxScore = 0, wRna = 0.7, wProtein = 0.3, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -23,6 +23,11 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
   const score = resultRow?.score;
   const confidence = resultRow?.confidence;
   const scenario = resultRow?.scenario;
+
+  // Colour the score with the SAME ratio thresholds the results table uses
+  // (score / maxScore): >=0.7 green, >=0.4 amber, else red.
+  const ratio = maxScore > 0 && score != null ? score / maxScore : 0;
+  const scoreColor = ratio >= 0.7 ? "#2f9e6f" : ratio >= 0.4 ? "#f0b429" : "#e05a4d";
 
   // Per-source combined scores (w_rna*RNA_source + w_protein*Protein), same scale
   // as overall score. Keyed by display name: { DepMap: 0.89, HPA: 0.85, GEO: 0.82 }
@@ -50,7 +55,7 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
           </div>
           <div className={styles.headerRight}>
             {score != null && (
-              <div className={styles.detailScore}>{score.toFixed(2)}</div>
+              <div className={styles.detailScore} style={{ background: scoreColor }}>{score.toFixed(2)}</div>
             )}
             <button className={styles.closeBtn} onClick={onClose}>×</button>
           </div>
@@ -82,14 +87,7 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                         {dirLabel}
                       </span>
                     </div>
-                    {gd.expression_rank != null ? (
-                      <div className={styles.geneCardRank}>
-                        Rank #{gd.expression_rank}{" "}
-                        <span className={styles.rankTotal}>
-                          / {gd.expression_total?.toLocaleString()}
-                        </span>
-                      </div>
-                    ) : (
+                    {gd.expression_rank == null && (
                       <div className={styles.geneCardRank}>No expression data</div>
                     )}
                     <div className={styles.geneCardSub}>
@@ -114,24 +112,33 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                 );
               })}
 
-              {/* Protein summary card */}
-              {data.protein && (
-                <div className={styles.geneCard}>
-                  <div className={styles.geneCardHeader}>
-                    <span className={styles.geneCardLabel}>Protein Detection</span>
-                  </div>
-                  <div className={styles.geneCardRank}>
-                    Rank #{data.protein.z_rank}{" "}
-                    <span className={styles.rankTotal}>/ {data.protein.total?.toLocaleString()}</span>
-                  </div>
-                  <div className={styles.geneCardSub}>
-                    {genes[0]?.hugo}: Intensity {data.protein.intensity} · Gygi proteomics
-                  </div>
-                  <div className={`${styles.geneCardSub} ${styles.proteinConfirm}`}>
-                    Confirmed at protein level ✓
-                  </div>
+              {/* Protein summary card — always shown */}
+              <div className={styles.geneCard}>
+                <div className={styles.geneCardHeader}>
+                  <span className={styles.geneCardLabel}>Protein Detection</span>
                 </div>
-              )}
+                {data.protein ? (
+                  <>
+                    <div className={styles.geneCardRank}>
+                      Rank #{data.protein.z_rank}{" "}
+                      <span className={styles.rankTotal}>/ {data.protein.total?.toLocaleString()}</span>
+                    </div>
+                    <div className={styles.geneCardSub}>
+                      {genes[0]?.hugo}: Intensity {data.protein.intensity} · Gygi proteomics
+                    </div>
+                    <div className={`${styles.geneCardSub} ${styles.proteinConfirm}`}>
+                      Confirmed at protein level ✓
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.geneCardRank}>No protein data</div>
+                    <div className={styles.geneCardSub}>
+                      {genes[0]?.hugo}: not detected in Gygi proteomics
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* ── Source-Level Scores per gene ── */}
@@ -189,42 +196,49 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                       );
                     })}
 
-                    {/* Protein source card — show alongside expression sources */}
-                    {data.protein && (
-                      <div className={styles.sourceCard}>
-                        <h5 className={styles.sourceTitle}>Protein (Gygi)</h5>
+                    {/* Protein source card — always shown */}
+                    <div className={styles.sourceCard}>
+                      <h5 className={styles.sourceTitle}>Protein (Gygi)</h5>
+                      {data.protein ? (
+                        <>
+                          <div className={styles.sourceRow}>
+                            <span>Intensity</span>
+                            <span className={styles.val}>{data.protein.intensity}</span>
+                          </div>
+                          {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                            <div className={styles.sourceRow}>
+                              <span>Z-Score</span>
+                              <span className={styles.val}>
+                                {data.protein.z_score > 0 ? "+" : ""}{data.protein.z_score}
+                              </span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                            <div className={styles.sourceRow}>
+                              <span>Percentile</span>
+                              <span className={styles.val}>{data.protein.percentile}%</span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                            <div className={styles.sourceRow}>
+                              <span>Z-Score Rank</span>
+                              <span className={styles.val}>#{data.protein.z_rank}</span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                            <div className={styles.sourceRow}>
+                              <span>Percentile Rank</span>
+                              <span className={styles.val}>#{data.protein.pct_rank}</span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
                         <div className={styles.sourceRow}>
-                          <span>Intensity</span>
-                          <span className={styles.val}>{data.protein.intensity}</span>
+                          <span>No protein data</span>
+                          <span className={styles.val}>—</span>
                         </div>
-                        {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
-                          <div className={styles.sourceRow}>
-                            <span>Z-Score</span>
-                            <span className={styles.val}>
-                              {data.protein.z_score > 0 ? "+" : ""}{data.protein.z_score}
-                            </span>
-                          </div>
-                        )}
-                        {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
-                          <div className={styles.sourceRow}>
-                            <span>Percentile</span>
-                            <span className={styles.val}>{data.protein.percentile}%</span>
-                          </div>
-                        )}
-                        {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
-                          <div className={styles.sourceRow}>
-                            <span>Z-Score Rank</span>
-                            <span className={styles.val}>#{data.protein.z_rank}</span>
-                          </div>
-                        )}
-                        {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
-                          <div className={styles.sourceRow}>
-                            <span>Percentile Rank</span>
-                            <span className={styles.val}>#{data.protein.pct_rank}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               );

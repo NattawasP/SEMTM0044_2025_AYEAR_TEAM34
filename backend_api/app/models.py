@@ -24,8 +24,8 @@ class RankRequest(BaseModel):
     top_n: int = Field(20, ge=1, le=200, description="Number of results to return")
     scoring_method: str = Field("rrf", pattern="^(rrf|zscore|percentile)$", description="Scoring method: rrf (ensemble), zscore only, percentile only")
     sources: list[str] = Field(
-        default=["depmap", "hpa", "geo", "protein"],
-        description="Data sources to include in ranking: depmap, hpa, geo, protein"
+        default=["depmap", "hpa", "geo"],
+        description="RNA expression sources to include in ranking: depmap, hpa, geo. Protein is always scored separately (see w_protein)."
     )
 
 

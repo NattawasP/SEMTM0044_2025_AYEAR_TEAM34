@@ -261,9 +261,8 @@ def run_ranking(
         expr_rrf, coverage = rank_expression(ensg, scoring_method, enabled_sources=rna_sources)
         coverage_per_gene[gene["hugo"]] = coverage
 
-        # 2. Protein (skip if not in selected sources)
-        include_protein = sources is None or "protein" in sources
-        prot_rrf = rank_protein(ensg) if include_protein else pd.Series(dtype=float)
+        # 2. Protein (always scored, independent of the RNA source filter)
+        prot_rrf = rank_protein(ensg)
 
         # 3. Combine
         combined = combine_rna_protein(expr_rrf, prot_rrf, w_rna, w_protein)

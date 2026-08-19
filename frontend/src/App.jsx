@@ -16,7 +16,7 @@ const DEFAULT_FILTERS = {
   lineage_filter: null,
   core_only: false,
   top_n: 20,
-  sources: ["depmap", "hpa", "geo", "protein"],
+  sources: ["depmap", "hpa", "geo"],
 };
 
 export default function App() {
@@ -83,6 +83,13 @@ export default function App() {
     if (!results) return;
     setSelected(selectAll ? results.map((r) => r.ach_id) : []);
   }
+
+  /* Highest score in the current results — used so the detail panel can colour
+     its score with the same ratio-based thresholds as the results table. */
+  const maxScore =
+    results && results.length > 0
+      ? Math.max(...results.map((r) => r.score))
+      : 0;
 
   return (
     <div className={styles.app}>
@@ -166,6 +173,7 @@ export default function App() {
           achId={detailId}
           genes={genes}
           resultRow={results?.find((r) => r.ach_id === detailId)}
+          maxScore={maxScore}
           wRna={filters.w_rna}
           wProtein={filters.w_protein}
           onClose={() => setDetailId(null)}
