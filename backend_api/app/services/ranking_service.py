@@ -355,6 +355,15 @@ def run_ranking(
                 all_muts.extend([m for m in gene_muts if m["ach_id"] == row["ach_id"]])
             mutations = all_muts if all_muts else None
 
+        # Collect fusions for include mode
+        fusions = None
+        if fusion_mode == "include":
+            all_fusions = []
+            for gene in genes:
+                gene_fusions = data_service.get_fusions_for_gene(gene["ensembl_id"])
+                all_fusions.extend([f for f in gene_fusions if f["ach_id"] == row["ach_id"]])
+            fusions = all_fusions if all_fusions else None
+
         score_col = "final_score" if "final_score" in row.index else "combined_score"
         results.append({
             "ach_id": row["ach_id"],
@@ -367,6 +376,7 @@ def run_ranking(
             "scenario": row.get("scenario", ""),
             "is_core": is_core,
             "mutations": mutations,
+            "fusions": fusions,
         })
 
     # Re-rank after filters

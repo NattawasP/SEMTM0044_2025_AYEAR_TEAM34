@@ -7,6 +7,7 @@ export default function ResultsTable({
   onToggleSelect,
   onSelectAll,
   onRowClick,
+  mutationMode = "ignore",
 }) {
   if (loading) {
     return (
@@ -24,6 +25,10 @@ export default function ResultsTable({
   const allSelected = results.every((r) => selected.includes(r.ach_id));
   const maxScore = Math.max(...results.map((r) => r.score));
 
+  // Mutation column only shows when the user has actively filtered for
+  // cell lines with mutations (Include). Ignore/Exclude keep the table clean.
+  const showMutationColumn = mutationMode === "include";
+
   function rankBadgeClass(rank) {
     if (rank === 1) return styles.rank1;
     if (rank === 2) return styles.rank2;
@@ -31,9 +36,9 @@ export default function ResultsTable({
     return styles.rankOther;
   }
 
-  function scoreFillClass(ratio) {
-    if (ratio >= 0.7) return styles.fillHigh;
-    if (ratio >= 0.4) return styles.fillMid;
+  function scoreFillClass(score) {
+    if (score >= 0.7) return styles.fillHigh;
+    if (score >= 0.4) return styles.fillMid;
     return styles.fillLow;
   }
 
@@ -42,6 +47,18 @@ export default function ResultsTable({
     if (scenario.includes("RNA only")) return styles.scenRna;
     if (scenario.includes("Protein only")) return styles.scenProt;
     return "";
+  }
+
+  // Summarise a cell line's mutations for the results table:
+  //   "3 mutations · has driver"  (if any mutation has is_driver = true)
+  //   "3 mutations"               (otherwise)
+  // The full per-variant table is shown in the detail panel on click.
+  function mutationSummary(mutations) {
+    if (!mutations || mutations.length === 0) return null;
+    const count = mutations.length;
+    const hasDriver = mutations.some((m) => m.is_driver);
+    const label = `${count} mutation${count !== 1 ? "s" : ""}`;
+    return hasDriver ? `${label} · has driver` : label;
   }
 
   return (
@@ -80,11 +97,13 @@ export default function ResultsTable({
               <th>Disease</th>
               <th>Score</th>
               <th>Scenario</th>
+              {showMutationColumn && <th>Mutation</th>}
             </tr>
           </thead>
           <tbody>
             {results.map((r) => {
               const ratio = maxScore > 0 ? r.score / maxScore : 0;
+              const mutText = showMutationColumn ? mutationSummary(r.mutations) : null;
 
               return (
                 <tr
@@ -113,7 +132,7 @@ export default function ResultsTable({
                     <div className={styles.scoreCell}>
                       <div className={styles.scoreBar}>
                         <div
-                          className={`${styles.scoreFill} ${scoreFillClass(ratio)}`}
+                          className={`${styles.scoreFill} ${scoreFillClass(r.score)}`}
                           style={{ width: `${ratio * 100}%` }}
                         />
                       </div>
@@ -125,6 +144,11 @@ export default function ResultsTable({
                       {r.scenario}
                     </span>
                   </td>
+                  {showMutationColumn && (
+                    <td style={{ fontSize: "12px", color: "#555" }}>
+                      {mutText || <span style={{ color: "#bbb" }}>—</span>}
+                    </td>
+                  )}
                 </tr>
               );
             })}

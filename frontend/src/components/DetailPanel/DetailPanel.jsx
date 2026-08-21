@@ -24,10 +24,14 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
   const confidence = resultRow?.confidence;
   const scenario = resultRow?.scenario;
 
-  // Colour the score with the SAME ratio thresholds the results table uses
-  // (score / maxScore): >=0.7 green, >=0.4 amber, else red.
-  const ratio = maxScore > 0 && score != null ? score / maxScore : 0;
-  const scoreColor = ratio >= 0.7 ? "#2f9e6f" : ratio >= 0.4 ? "#f0b429" : "#e05a4d";
+  // Colour the score using RAW score value (same thresholds as the results table).
+  // Raw score gives a colour that reflects absolute quality, so it doesn't
+  // mislead when the top result in a filtered list happens to have a low score.
+  const scoreColor =
+    score == null ? "#e05a4d"
+    : score >= 0.7 ? "#2f9e6f"
+    : score >= 0.4 ? "#f0b429"
+    : "#e05a4d";
 
   // Per-source combined scores (w_rna*RNA_source + w_protein*Protein), same scale
   // as overall score. Keyed by display name: { DepMap: 0.89, HPA: 0.85, GEO: 0.82 }
@@ -260,6 +264,8 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                         <th className={styles.thCenter}>Driver</th>
                         <th className={styles.thCenter}>Hotspot</th>
                         <th className={styles.thCenter}>Damaging</th>
+                        <th className={styles.thCenter}>Loss of function</th>
+                        <th className={styles.thCenter}>Mutation %</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -286,6 +292,16 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                             <span className={`${styles.pill} ${m.is_damaging ? styles.pillPass : styles.pillFail}`}>
                               {m.is_damaging ? "Yes" : "No"}
                             </span>
+                          </td>
+                          <td className={styles.tdCenter}>
+                            <span className={`${styles.pill} ${m.is_lof ? styles.pillPass : styles.pillFail}`}>
+                              {m.is_lof ? "Yes" : "No"}
+                            </span>
+                          </td>
+                          <td className={styles.tdCenter}>
+                            {m.allele_freq != null
+                              ? `${(m.allele_freq * 100).toFixed(1)}%`
+                              : "—"}
                           </td>
                         </tr>
                       ))}

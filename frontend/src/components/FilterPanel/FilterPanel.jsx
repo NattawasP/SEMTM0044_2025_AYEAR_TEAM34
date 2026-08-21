@@ -68,15 +68,24 @@ export default function FilterPanel({ filters, onChange }) {
             {MODE_OPTIONS.map((m) => (
               <button
                 key={m}
-                className={`${styles.modeBtn} ${
-                  filters.mutation_mode === m ? styles[`mode_${m}`] : ""
-                }`}
+                className={`${styles.modeBtn} ${filters.mutation_mode === m ? styles[`mode_${m}`] : ""
+                  }`}
                 onClick={() => set("mutation_mode", m)}
               >
                 {m.charAt(0).toUpperCase() + m.slice(1)}
               </button>
             ))}
           </div>
+          {filters.mutation_mode === "include" && (
+            <label style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", fontSize: "13px", color: "#555" }}>
+              <input
+                type="checkbox"
+                checked={filters.driver_only || false}
+                onChange={(e) => set("driver_only", e.target.checked)}
+              />
+              Driver only
+            </label>
+          )}
         </div>
 
         {/* Fusion mode */}
@@ -86,9 +95,8 @@ export default function FilterPanel({ filters, onChange }) {
             {MODE_OPTIONS.map((m) => (
               <button
                 key={m}
-                className={`${styles.modeBtn} ${
-                  filters.fusion_mode === m ? styles[`mode_${m}`] : ""
-                }`}
+                className={`${styles.modeBtn} ${filters.fusion_mode === m ? styles[`mode_${m}`] : ""
+                  }`}
                 onClick={() => set("fusion_mode", m)}
               >
                 {m.charAt(0).toUpperCase() + m.slice(1)}
