@@ -8,6 +8,7 @@ export default function ResultsTable({
   onSelectAll,
   onRowClick,
   mutationMode = "ignore",
+  fusionMode = "ignore",
 }) {
   if (loading) {
     return (
@@ -28,6 +29,7 @@ export default function ResultsTable({
   // Mutation column only shows when the user has actively filtered for
   // cell lines with mutations (Include). Ignore/Exclude keep the table clean.
   const showMutationColumn = mutationMode === "include";
+  const showFusionColumn = fusionMode === "include";
 
   function rankBadgeClass(rank) {
     if (rank === 1) return styles.rank1;
@@ -59,6 +61,57 @@ export default function ResultsTable({
     const hasDriver = mutations.some((m) => m.is_driver);
     const label = `${count} mutation${count !== 1 ? "s" : ""}`;
     return hasDriver ? `${label} · has driver` : label;
+  }
+
+  // Summarise a cell line's fusions for the results table:
+  //   "SEC61G-DT +2 more"   (shows the partner gene(s), not the searched gene)
+  //   "SEC61G-DT"           (single partner)
+  // For each fusion, the "partner" is whichever gene is NOT the one the user
+  // searched for. Duplicates are removed so a fusion listed twice (different
+  // transcript variants) counts as one partner.
+  function fusionSummary(fusions) {
+    if (!fusions || fusions.length === 0) return null;
+    // Collect unique partner genes across all fusions in this cell line.
+    // "Partner" = the gene in the fusion that isn't the one the user searched.
+    // We treat any searched gene as "self" and pick the other side.
+    const searchedGenes = new Set(); // built below from all fusions themselves
+    // Fallback: figure out searched genes by seeing which gene appears on
+    // both sides across many fusions in this cell line — but simpler and
+    // correct is to use the fact that a "partner" is whichever gene name
+    // wasn't the searched one. We don't have the search query here, so
+    // instead derive it: if the same gene appears in every fusion, it's the
+    // searched one.
+    const gene1Set = new Set(fusions.map((f) => f.gene1_hugo));
+    const gene2Set = new Set(fusions.map((f) => f.gene2_hugo));
+    // If every fusion has the same gene on side 1 → that's the searched gene
+    // and partners come from gene2. Same for side 2. Otherwise fall back to
+    // showing the fusion_name.
+    const commonG1 = gene1Set.size === 1 ? [...gene1Set][0] : null;
+    const commonG2 = gene2Set.size === 1 ? [...gene2Set][0] : null;
+
+    let partners;
+    if (commonG1 && !commonG2) {
+      partners = [...new Set(fusions.map((f) => f.gene2_hugo))];
+    } else if (commonG2 && !commonG1) {
+      partners = [...new Set(fusions.map((f) => f.gene1_hugo))];
+    } else if (commonG1 && commonG2) {
+      // Only one distinct fusion pair — pick the "other" side arbitrarily
+      partners = [commonG2];
+    } else {
+      // Mixed — pick each partner as the one that differs across fusions
+      partners = [
+        ...new Set(
+          fusions.map((f) =>
+            gene1Set.size < gene2Set.size ? f.gene2_hugo : f.gene1_hugo
+          )
+        ),
+      ];
+    }
+
+    if (partners.length === 0) return null;
+    const first = partners[0];
+    const rest = partners.length - 1;
+    return rest > 0 ? `${first} +${rest} more` : first;
   }
 
   return (
@@ -98,12 +151,14 @@ export default function ResultsTable({
               <th>Score</th>
               <th>Scenario</th>
               {showMutationColumn && <th>Mutation</th>}
+              {showFusionColumn && <th>Fusion</th>}
             </tr>
           </thead>
           <tbody>
             {results.map((r) => {
               const ratio = maxScore > 0 ? r.score / maxScore : 0;
               const mutText = showMutationColumn ? mutationSummary(r.mutations) : null;
+              const fusText = showFusionColumn ? fusionSummary(r.fusions) : null;
 
               return (
                 <tr
@@ -147,6 +202,11 @@ export default function ResultsTable({
                   {showMutationColumn && (
                     <td style={{ fontSize: "12px", color: "#555" }}>
                       {mutText || <span style={{ color: "#bbb" }}>—</span>}
+                    </td>
+                  )}
+                  {showFusionColumn && (
+                    <td style={{ fontSize: "12px", color: "#555" }}>
+                      {fusText || <span style={{ color: "#bbb" }}>—</span>}
                     </td>
                   )}
                 </tr>

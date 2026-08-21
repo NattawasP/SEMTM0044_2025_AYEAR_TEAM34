@@ -261,6 +261,7 @@ export default function App() {
             onSelectAll={handleSelectAll}
             onRowClick={setDetailId}
             mutationMode={filters.mutation_mode}
+            fusionMode={filters.fusion_mode}
           />
         </main>
       </div>

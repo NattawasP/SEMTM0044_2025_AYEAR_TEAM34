@@ -167,7 +167,7 @@ def get_cell_line(ach_id: str, gene: str | None = None):
         mutations = [m for m in all_muts if m["ach_id"] == ach_id]
 
         # Fusions
-        all_fusions = data_service.get_fusions_for_gene(ensg)
+        all_fusions = data_service.get_fusions_for_gene(gene_info["hugo_symbol"])
         fusions = [f for f in all_fusions if f["ach_id"] == ach_id]
 
         result["gene"] = gene

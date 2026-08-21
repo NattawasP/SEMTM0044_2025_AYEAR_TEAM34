@@ -324,7 +324,7 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                         <th>Fusion</th>
                         <th>Confidence</th>
                         <th>Frame</th>
-                        <th>FFPM</th>
+                        <th>Fusion Fragments (per million)</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -216,12 +216,13 @@ def apply_mutation_filter(
 
 
 def apply_fusion_filter(
-    df: pd.DataFrame, mode: str, ensembl_id: str
+    df: pd.DataFrame, mode: str, hugo: str
 ) -> pd.DataFrame:
-    """Apply hard fusion filter: include / exclude / ignore."""
+    """Apply hard fusion filter: include / exclude / ignore.
+    Matches fusion rows by HUGO symbol (see get_fused_cell_lines)."""
     if mode == "ignore":
         return df
-    fused = data_service.get_fused_cell_lines(ensembl_id)
+    fused = data_service.get_fused_cell_lines(hugo)
     if not fused:
         return df if mode == "exclude" else df.iloc[0:0]
 
@@ -269,7 +270,7 @@ def run_ranking(
 
         # 4. Mutation/Fusion filter
         combined = apply_mutation_filter(combined, mutation_mode, ensg)
-        combined = apply_fusion_filter(combined, fusion_mode, ensg)
+        combined = apply_fusion_filter(combined, fusion_mode, gene["hugo"])
 
         combined_per_gene[gene["hugo"]] = combined
 
@@ -360,7 +361,7 @@ def run_ranking(
         if fusion_mode == "include":
             all_fusions = []
             for gene in genes:
-                gene_fusions = data_service.get_fusions_for_gene(gene["ensembl_id"])
+                gene_fusions = data_service.get_fusions_for_gene(gene["hugo"])
                 all_fusions.extend([f for f in gene_fusions if f["ach_id"] == row["ach_id"]])
             fusions = all_fusions if all_fusions else None
 

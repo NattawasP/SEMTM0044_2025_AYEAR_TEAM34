@@ -57,6 +57,7 @@ class RankedCellLine(BaseModel):
     growth_pattern: str | None = None
     is_core: bool = False
     mutations: list[dict] | None = None
+    fusions: list[dict] | None = None
 
 
 class RankResponse(BaseModel):
