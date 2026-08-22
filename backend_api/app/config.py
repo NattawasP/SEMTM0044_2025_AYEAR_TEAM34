@@ -6,6 +6,10 @@ Reads settings from environment variables with sensible defaults.
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()  # reads .env file if present
+
 
 # ── Data directory ────────────────────────────────────────────
 # Points to the folder containing Parquet files produced by csv_to_parquet.py

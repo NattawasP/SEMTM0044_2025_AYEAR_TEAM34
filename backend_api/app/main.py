@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CORS_ORIGINS
-from app.routers import genes, ranking, celllines, filters
+from app.routers import genes, ranking, celllines, filters, chat
 
 app = FastAPI(
     title="CellLineFinder API",
@@ -28,6 +28,7 @@ app.include_router(genes.router)
 app.include_router(ranking.router)
 app.include_router(celllines.router)
 app.include_router(filters.router)
+app.include_router(chat.router)
 
 
 @app.get("/")
