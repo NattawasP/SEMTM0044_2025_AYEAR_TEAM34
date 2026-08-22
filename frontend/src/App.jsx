@@ -4,6 +4,7 @@ import FilterPanel from "./components/FilterPanel/FilterPanel.jsx";
 import ResultsTable from "./components/ResultsTable/ResultsTable.jsx";
 import DetailPanel from "./components/DetailPanel/DetailPanel.jsx";
 import CompareView from "./components/CompareView/CompareView.jsx";
+import ChatWidget from "./components/ChatWidget/ChatWidget.jsx";
 import { rankCellLines } from "./api";
 import styles from "./App.module.css";
 
@@ -180,6 +181,9 @@ export default function App() {
           onClose={() => setShowCompare(false)}
         />
       )}
+
+      {/* Chat widget */}
+      <ChatWidget />
     </div>
   );
 }
