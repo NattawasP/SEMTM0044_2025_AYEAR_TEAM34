@@ -169,6 +169,8 @@ def combine_rna_protein(
 
     rows = []
     for ach in all_ids:
+        if ach is None or (isinstance(ach, float) and np.isnan(ach)):
+            continue  
         has_rna = ach in expr_norm.index and not np.isnan(expr_norm.get(ach, np.nan))
         has_prot = ach in prot_norm.index and not np.isnan(prot_norm.get(ach, np.nan))
 
@@ -231,6 +233,37 @@ def apply_fusion_filter(
     else:
         return df[~df["ach_id"].isin(fused)]
 
+# ── Instability / Metabolite / miRNA filters ───────────────────────────
+
+def apply_instability_filter(
+    df: pd.DataFrame, msi_max: float | None, cin_max: float | None
+) -> pd.DataFrame:
+    """Exclude cell lines above the given MSI / CIN thresholds."""
+    if msi_max is None and cin_max is None:
+        return df
+    unstable = data_service.get_unstable_cell_lines(msi_max, cin_max)
+    return df[~df["ach_id"].isin(unstable)] if unstable else df
+
+
+def apply_metabolite_filter(
+    df: pd.DataFrame, metabolite: str | None, threshold: float | None
+) -> pd.DataFrame:
+    """Exclude cell lines whose level of a metabolite exceeds the threshold."""
+    if metabolite is None or threshold is None:
+        return df
+    high = data_service.get_high_metabolite_cell_lines(metabolite, threshold)
+    return df[~df["ach_id"].isin(high)] if high else df
+
+
+def apply_mirna_filter(
+    df: pd.DataFrame, mirna_id: str | None, threshold: float | None
+) -> pd.DataFrame:
+    """Exclude cell lines whose expression of a miRNA exceeds the threshold."""
+    if mirna_id is None or threshold is None:
+        return df
+    high = data_service.get_high_mirna_cell_lines(mirna_id, threshold)
+    return df[~df["ach_id"].isin(high)] if high else df
+
 
 # ── Full ranking pipeline ────────────────────────────────────
 
@@ -240,6 +273,12 @@ def run_ranking(
     w_protein: float = 0.3,
     mutation_mode: str = "ignore",
     fusion_mode: str = "ignore",
+    msi_max: float | None = None,
+    cin_max: float | None = None,
+    exclude_metabolite: str | None = None,
+    metabolite_threshold: float | None = None,
+    exclude_mirna: str | None = None,
+    mirna_threshold: float | None = None,
     disease_filter: str | None = None,
     lineage_filter: str | None = None,
     core_only: bool = False,
@@ -271,7 +310,10 @@ def run_ranking(
         # 4. Mutation/Fusion filter
         combined = apply_mutation_filter(combined, mutation_mode, ensg)
         combined = apply_fusion_filter(combined, fusion_mode, gene["hugo"])
-
+        combined = apply_instability_filter(combined, msi_max, cin_max)
+        combined = apply_metabolite_filter(combined, exclude_metabolite, metabolite_threshold)
+        combined = apply_mirna_filter(combined, exclude_mirna, mirna_threshold)
+        
         combined_per_gene[gene["hugo"]] = combined
 
     # 5. Multi-gene combination
