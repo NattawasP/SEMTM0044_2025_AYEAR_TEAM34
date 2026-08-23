@@ -146,6 +146,57 @@ def get_fused_cell_lines(hugo: str) -> set[str]:
     )
     return {r["ach_id"] for r in rows}
 
+# ── Non-gene-expression exclusion queries ─────────────────────
+
+def get_unstable_cell_lines(msi_max: float | None, cin_max: float | None) -> set[str]:
+    """Cell lines exceeding the given genomic instability thresholds."""
+    clauses = []
+    params = []
+    if msi_max is not None:
+        clauses.append("MSIScore > ?")
+        params.append(msi_max)
+    if cin_max is not None:
+        clauses.append("CIN > ?")
+        params.append(cin_max)
+    if not clauses:
+        return set()
+
+    rows = query(
+        f"""
+        SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
+        FROM fact_signatures
+        WHERE {" OR ".join(clauses)}
+        """,
+        params,
+    )
+    return {r["ach_id"] for r in rows}
+
+
+def get_high_metabolite_cell_lines(metabolite: str, threshold: float) -> set[str]:
+    """Cell lines whose level of a metabolite exceeds the threshold."""
+    rows = query(
+        """
+        SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
+        FROM fact_metabolomics
+        WHERE CAST(metabolite AS VARCHAR) = ? AND value > ?
+        """,
+        [metabolite, threshold],
+    )
+    return {r["ach_id"] for r in rows}
+
+
+def get_high_mirna_cell_lines(mirna_id: str, threshold: float) -> set[str]:
+    """Cell lines whose expression of a miRNA exceeds the threshold."""
+    rows = query(
+        """
+        SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
+        FROM fact_mirna
+        WHERE CAST(mirna_id AS VARCHAR) = ? AND value > ?
+        """,
+        [mirna_id, threshold],
+    )
+    return {r["ach_id"] for r in rows}
+
 
 # ── Cell line metadata ────────────────────────────────────────
 

@@ -40,6 +40,12 @@ FILES = [
     # Fact tables (small)
     ("fact_mutations.csv",          False, None),
     ("fact_fusions.csv",            False, None),
+    # Non-gene-expression layers
+    ("fact_metabolomics.csv",       True,  500_000),
+    ("fact_mirna.csv",              True,  500_000),
+    ("fact_signatures.csv",         False, None),
+    # Extra dimension table for cell line parents
+    ("dim_cell_line_parents.csv",   False, None),
 ]
 
 # ── Column name normalisation ─────────────────────────────────
@@ -57,7 +63,8 @@ CATEGORICAL_COLUMNS = {
     "variant_type", "variant_info", "chrom",
     "gene1_ensg", "gene2_ensg", "gene1_hugo", "gene2_hugo",
     "fusion_name", "confidence", "reading_frame",
-    "uniprot_id", "metadata_source",
+    "uniprot_id", "metadata_source", "metabolite", "mirna_id",
+    "parent_ach_id",
 }
 
 # Boolean columns stored as strings in CSV

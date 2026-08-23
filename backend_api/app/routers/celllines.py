@@ -5,7 +5,7 @@ Cell line detail and comparison endpoints.
 from fastapi import APIRouter, HTTPException, Query
 
 from app.models import CompareRequest, CellLineDetail
-from app.services import data_service
+from app.services import data_service, similarity_service
 from app.services import ranking_service
 
 router = APIRouter(prefix="/api/celllines", tags=["celllines"])
@@ -121,6 +121,23 @@ def get_evidence(
     evidence["source_scores"] = _per_source_scores(ach_id, gene_targets, w_rna, w_protein)
 
     return {**cl, **evidence}
+
+
+@router.get("/{ach_id}/similar")
+def get_similar(ach_id: str, top_n: int = Query(10, ge=1, le=50)):
+    """Cell lines with the most similar expression profile to this one."""
+    cl = data_service.get_cell_line(ach_id)
+    if cl is None:
+        raise HTTPException(status_code=404, detail=f"Cell line '{ach_id}' not found")
+
+    hits = similarity_service.find_similar(ach_id, top_n=top_n)
+    if hits is None:
+        raise HTTPException(status_code=404, detail=f"No expression profile for '{ach_id}'")
+
+    meta = data_service.get_cell_lines_metadata([h["ach_id"] for h in hits])
+    results = [{**meta.get(h["ach_id"], {"ach_id": h["ach_id"]}), **h} for h in hits]
+
+    return {"target": cl, "similar": results}
 
 
 @router.get("/{ach_id}")
