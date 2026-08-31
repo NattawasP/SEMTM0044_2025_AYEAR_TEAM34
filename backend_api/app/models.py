@@ -18,14 +18,20 @@ class RankRequest(BaseModel):
     w_protein: float = Field(0.3, ge=0.0, le=1.0, description="Weight for protein")
     mutation_mode: str = Field("ignore", pattern="^(include|exclude|ignore)$")
     fusion_mode: str = Field("ignore", pattern="^(include|exclude|ignore)$")
+    msi_max: float | None = Field(None, description="Exclude cell lines with MSIScore above this")
+    cin_max: float | None = Field(None, description="Exclude cell lines with CIN above this")
+    exclude_metabolite: str | None = Field(None, description="Metabolite name to filter on")
+    metabolite_threshold: float | None = Field(None, description="Exclude above this level; required if exclude_metabolite is set")
+    exclude_mirna: str | None = Field(None, description="miRNA id to filter on, e.g. hsa-miR-21")
+    mirna_threshold: float | None = Field(None, description="Exclude above this level; required if exclude_mirna is set")
     disease_filter: str | None = Field(None, description="Filter by primary_disease")
     lineage_filter: str | None = Field(None, description="Filter by lineage")
     core_only: bool = Field(False, description="Only cell lines with data in all 3 expression sources")
     top_n: int = Field(20, ge=1, le=200, description="Number of results to return")
     scoring_method: str = Field("rrf", pattern="^(rrf|zscore|percentile)$", description="Scoring method: rrf (ensemble), zscore only, percentile only")
     sources: list[str] = Field(
-        default=["depmap", "hpa", "geo", "protein"],
-        description="Data sources to include in ranking: depmap, hpa, geo, protein"
+        default=["depmap", "hpa", "geo"],
+        description="RNA expression sources to include in ranking: depmap, hpa, geo. Protein is always scored separately (see w_protein)."
     )
 
 
@@ -57,6 +63,7 @@ class RankedCellLine(BaseModel):
     growth_pattern: str | None = None
     is_core: bool = False
     mutations: list[dict] | None = None
+    fusions: list[dict] | None = None
 
 
 class RankResponse(BaseModel):

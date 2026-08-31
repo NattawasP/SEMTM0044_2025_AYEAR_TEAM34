@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import SearchBar from "./components/SearchBar/SearchBar.jsx";
 import FilterPanel from "./components/FilterPanel/FilterPanel.jsx";
 import ResultsTable from "./components/ResultsTable/ResultsTable.jsx";
@@ -17,7 +17,7 @@ const DEFAULT_FILTERS = {
   lineage_filter: null,
   core_only: false,
   top_n: 20,
-  sources: ["depmap", "hpa", "geo", "protein"],
+  sources: ["depmap", "hpa", "geo"],
 };
 
 export default function App() {
@@ -30,6 +30,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  /* Stale-results tracking: true when genes/filters changed since last search */
+  const [stale, setStale] = useState(false);
+  const hasSearched = useRef(false);
+
   /* Selection & panels */
   const [selected, setSelected] = useState([]);
   const [detailId, setDetailId] = useState(null);
@@ -38,10 +42,18 @@ export default function App() {
   /* Gene management */
   const addGene = useCallback((gene) => {
     setGenes((prev) => [...prev, gene]);
+    if (hasSearched.current) setStale(true);
   }, []);
 
   const removeGene = useCallback((hugo) => {
     setGenes((prev) => prev.filter((g) => g.hugo !== hugo));
+    if (hasSearched.current) setStale(true);
+  }, []);
+
+  /* Wrap filter changes to also mark stale */
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+    if (hasSearched.current) setStale(true);
   }, []);
 
   /* Run ranking */
@@ -58,6 +70,8 @@ export default function App() {
         ...filters,
       });
       setResults(res.results);
+      hasSearched.current = true;
+      setStale(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -84,6 +98,13 @@ export default function App() {
     if (!results) return;
     setSelected(selectAll ? results.map((r) => r.ach_id) : []);
   }
+
+  /* Highest score in the current results — used so the detail panel can colour
+     its score with the same ratio-based thresholds as the results table. */
+  const maxScore =
+    results && results.length > 0
+      ? Math.max(...results.map((r) => r.score))
+      : 0;
 
   return (
     <div className={styles.app}>
@@ -112,7 +133,7 @@ export default function App() {
           </div>
 
           <div className={styles.sidebarSection}>
-            <FilterPanel filters={filters} onChange={setFilters} />
+            <FilterPanel filters={filters} onChange={handleFilterChange} />
           </div>
 
           <div className={styles.sidebarSection}>
@@ -150,6 +171,12 @@ export default function App() {
             </div>
           )}
 
+          {stale && results && (
+            <div className={styles.staleBanner}>
+              Search parameters changed — click <b>Find Cell Lines</b> to update results.
+            </div>
+          )}
+
           <ResultsTable
             results={results}
             loading={loading}
@@ -167,6 +194,7 @@ export default function App() {
           achId={detailId}
           genes={genes}
           resultRow={results?.find((r) => r.ach_id === detailId)}
+          maxScore={maxScore}
           wRna={filters.w_rna}
           wProtein={filters.w_protein}
           onClose={() => setDetailId(null)}

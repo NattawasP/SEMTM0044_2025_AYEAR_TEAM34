@@ -28,6 +28,10 @@ PARQUET = {
     "fact_proteomics":      DATA_DIR / "fact_proteomics.parquet",
     "fact_mutations":       DATA_DIR / "fact_mutations.parquet",
     "fact_fusions":         DATA_DIR / "fact_fusions.parquet",
+    "fact_metabolomics":    DATA_DIR / "fact_metabolomics.parquet",
+    "fact_mirna":           DATA_DIR / "fact_mirna.parquet",
+    "fact_signatures":      DATA_DIR / "fact_signatures.parquet",
+    "dim_cell_line_parents": DATA_DIR / "dim_cell_line_parents.parquet",
 }
 
 # ── Ranking defaults ─────────────────────────────────────────

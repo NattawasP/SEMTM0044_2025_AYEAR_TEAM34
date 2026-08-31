@@ -8,7 +8,6 @@ const DATA_SOURCES = [
   { key: "depmap", label: "DepMap" },
   { key: "hpa", label: "HPA" },
   { key: "geo", label: "GEO" },
-  { key: "protein", label: "Protein" },
 ];
 
 export default function FilterPanel({ filters, onChange }) {
@@ -39,7 +38,7 @@ export default function FilterPanel({ filters, onChange }) {
           <label className={styles.label}>Data Sources</label>
           <div className={styles.sourceChecks}>
             {DATA_SOURCES.map((src) => {
-              const sources = filters.sources || ["depmap", "hpa", "geo", "protein"];
+              const sources = filters.sources || ["depmap", "hpa", "geo"];
               const checked = sources.includes(src.key);
               return (
                 <label key={src.key} className={styles.sourceCheck}>

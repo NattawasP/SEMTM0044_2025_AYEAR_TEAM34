@@ -40,6 +40,11 @@ FILES = [
     # Fact tables (small)
     ("fact_mutations.csv",          False, None),
     ("fact_fusions.csv",            False, None),
+    # Victor's new tables
+    ("fact_metabolomics.csv",       False, None),
+    ("fact_mirna.csv",              False, None),
+    ("fact_signatures.csv",         False, None),
+    ("dim_cell_line_parents.csv",   False, None),
 ]
 
 # ── Column name normalisation ─────────────────────────────────
@@ -58,6 +63,7 @@ CATEGORICAL_COLUMNS = {
     "gene1_ensg", "gene2_ensg", "gene1_hugo", "gene2_hugo",
     "fusion_name", "confidence", "reading_frame",
     "uniprot_id", "metadata_source",
+    "metabolite", "mirna_id", "parent_ach_id",
 }
 
 # Boolean columns stored as strings in CSV

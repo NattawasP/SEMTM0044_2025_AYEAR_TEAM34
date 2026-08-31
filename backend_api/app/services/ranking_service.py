@@ -169,6 +169,8 @@ def combine_rna_protein(
 
     rows = []
     for ach in all_ids:
+        if ach is None or (isinstance(ach, float) and np.isnan(ach)):
+            continue
         has_rna = ach in expr_norm.index and not np.isnan(expr_norm.get(ach, np.nan))
         has_prot = ach in prot_norm.index and not np.isnan(prot_norm.get(ach, np.nan))
 
@@ -231,6 +233,38 @@ def apply_fusion_filter(
         return df[~df["ach_id"].isin(fused)]
 
 
+# ── Instability / Metabolite / miRNA filters ───────────────────────────
+
+def apply_instability_filter(
+    df: pd.DataFrame, msi_max: float | None, cin_max: float | None
+) -> pd.DataFrame:
+    """Exclude cell lines above the given MSI / CIN thresholds."""
+    if msi_max is None and cin_max is None:
+        return df
+    unstable = data_service.get_unstable_cell_lines(msi_max, cin_max)
+    return df[~df["ach_id"].isin(unstable)] if unstable else df
+
+
+def apply_metabolite_filter(
+    df: pd.DataFrame, metabolite: str | None, threshold: float | None
+) -> pd.DataFrame:
+    """Exclude cell lines whose level of a metabolite exceeds the threshold."""
+    if metabolite is None or threshold is None:
+        return df
+    high = data_service.get_high_metabolite_cell_lines(metabolite, threshold)
+    return df[~df["ach_id"].isin(high)] if high else df
+
+
+def apply_mirna_filter(
+    df: pd.DataFrame, mirna_id: str | None, threshold: float | None
+) -> pd.DataFrame:
+    """Exclude cell lines whose expression of a miRNA exceeds the threshold."""
+    if mirna_id is None or threshold is None:
+        return df
+    high = data_service.get_high_mirna_cell_lines(mirna_id, threshold)
+    return df[~df["ach_id"].isin(high)] if high else df
+
+
 # ── Full ranking pipeline ────────────────────────────────────
 
 def run_ranking(
@@ -239,6 +273,12 @@ def run_ranking(
     w_protein: float = 0.3,
     mutation_mode: str = "ignore",
     fusion_mode: str = "ignore",
+    msi_max: float | None = None,
+    cin_max: float | None = None,
+    exclude_metabolite: str | None = None,
+    metabolite_threshold: float | None = None,
+    exclude_mirna: str | None = None,
+    mirna_threshold: float | None = None,
     disease_filter: str | None = None,
     lineage_filter: str | None = None,
     core_only: bool = False,
@@ -261,9 +301,8 @@ def run_ranking(
         expr_rrf, coverage = rank_expression(ensg, scoring_method, enabled_sources=rna_sources)
         coverage_per_gene[gene["hugo"]] = coverage
 
-        # 2. Protein (skip if not in selected sources)
-        include_protein = sources is None or "protein" in sources
-        prot_rrf = rank_protein(ensg) if include_protein else pd.Series(dtype=float)
+        # 2. Protein (always scored, independent of the RNA source filter)
+        prot_rrf = rank_protein(ensg)
 
         # 3. Combine
         combined = combine_rna_protein(expr_rrf, prot_rrf, w_rna, w_protein)
@@ -271,6 +310,9 @@ def run_ranking(
         # 4. Mutation/Fusion filter
         combined = apply_mutation_filter(combined, mutation_mode, ensg)
         combined = apply_fusion_filter(combined, fusion_mode, ensg)
+        combined = apply_instability_filter(combined, msi_max, cin_max)
+        combined = apply_metabolite_filter(combined, exclude_metabolite, metabolite_threshold)
+        combined = apply_mirna_filter(combined, exclude_mirna, mirna_threshold)
 
         combined_per_gene[gene["hugo"]] = combined
 
@@ -356,6 +398,15 @@ def run_ranking(
                 all_muts.extend([m for m in gene_muts if m["ach_id"] == row["ach_id"]])
             mutations = all_muts if all_muts else None
 
+        # Collect fusions for include mode
+        fusions = None
+        if fusion_mode == "include":
+            all_fusions = []
+            for gene in genes:
+                gene_fusions = data_service.get_fusions_for_gene(gene["ensembl_id"])
+                all_fusions.extend([f for f in gene_fusions if f["ach_id"] == row["ach_id"]])
+            fusions = all_fusions if all_fusions else None
+
         score_col = "final_score" if "final_score" in row.index else "combined_score"
         results.append({
             "ach_id": row["ach_id"],
@@ -368,6 +419,7 @@ def run_ranking(
             "scenario": row.get("scenario", ""),
             "is_core": is_core,
             "mutations": mutations,
+            "fusions": fusions,
         })
 
     # Re-rank after filters

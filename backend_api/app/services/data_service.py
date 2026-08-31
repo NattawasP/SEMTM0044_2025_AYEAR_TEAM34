@@ -113,7 +113,7 @@ def get_mutated_cell_lines(ensembl_id: str) -> set[str]:
 # ── Fusion queries ────────────────────────────────────────────
 
 def get_fusions_for_gene(ensembl_id: str) -> list[dict]:
-    """Get fusions involving a gene (as gene1 or gene2), high/medium confidence only."""
+    """Get fusions involving a gene (as gene1 or gene2), any confidence level."""
     return query(
         """
         SELECT CAST(ach_id AS VARCHAR) AS ach_id,
@@ -124,22 +124,72 @@ def get_fusions_for_gene(ensembl_id: str) -> list[dict]:
                reading_frame, supporting_reads
         FROM fact_fusions
         WHERE (CAST(gene1_ensg AS VARCHAR) = ? OR CAST(gene2_ensg AS VARCHAR) = ?)
-          AND CAST(confidence AS VARCHAR) IN ('high', 'medium')
         """,
         [ensembl_id, ensembl_id],
     )
 
 
 def get_fused_cell_lines(ensembl_id: str) -> set[str]:
-    """Get set of ach_ids that have fusions involving this gene."""
+    """Get set of ach_ids that have fusions involving this gene (any confidence)."""
     rows = query(
         """
         SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
         FROM fact_fusions
         WHERE (CAST(gene1_ensg AS VARCHAR) = ? OR CAST(gene2_ensg AS VARCHAR) = ?)
-          AND CAST(confidence AS VARCHAR) IN ('high', 'medium')
         """,
         [ensembl_id, ensembl_id],
+    )
+    return {r["ach_id"] for r in rows}
+
+
+# ── Instability / Metabolite / miRNA queries ─────────────────
+
+def get_unstable_cell_lines(msi_max: float | None, cin_max: float | None) -> set[str]:
+    """Cell lines exceeding the given genomic instability thresholds."""
+    clauses = []
+    params = []
+    if msi_max is not None:
+        clauses.append("MSIScore > ?")
+        params.append(msi_max)
+    if cin_max is not None:
+        clauses.append("CIN > ?")
+        params.append(cin_max)
+    if not clauses:
+        return set()
+
+    rows = query(
+        f"""
+        SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
+        FROM fact_signatures
+        WHERE {" OR ".join(clauses)}
+        """,
+        params,
+    )
+    return {r["ach_id"] for r in rows}
+
+
+def get_high_metabolite_cell_lines(metabolite: str, threshold: float) -> set[str]:
+    """Cell lines whose level of a metabolite exceeds the threshold."""
+    rows = query(
+        """
+        SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
+        FROM fact_metabolomics
+        WHERE CAST(metabolite AS VARCHAR) = ? AND value > ?
+        """,
+        [metabolite, threshold],
+    )
+    return {r["ach_id"] for r in rows}
+
+
+def get_high_mirna_cell_lines(mirna_id: str, threshold: float) -> set[str]:
+    """Cell lines whose expression of a miRNA exceeds the threshold."""
+    rows = query(
+        """
+        SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
+        FROM fact_mirna
+        WHERE CAST(mirna_id AS VARCHAR) = ? AND value > ?
+        """,
+        [mirna_id, threshold],
     )
     return {r["ach_id"] for r in rows}
 

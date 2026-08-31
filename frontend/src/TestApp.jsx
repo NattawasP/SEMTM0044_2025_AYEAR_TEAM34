@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import SearchBar from "./components/SearchBar/SearchBar.jsx";
 import FilterPanel from "./components/FilterPanel/FilterPanel.jsx";
 import ResultsTable from "./components/ResultsTable/ResultsTable.jsx";
@@ -17,7 +17,7 @@ const DEFAULT_FILTERS = {
   lineage_filter: null,
   core_only: false,
   top_n: 20,
-  sources: ["depmap", "hpa", "geo", "protein"],
+  sources: ["depmap", "hpa", "geo"],
 };
 
 const SCORING_METHODS = [
@@ -37,6 +37,10 @@ export default function TestApp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  /* Stale-results tracking */
+  const [stale, setStale] = useState(false);
+  const hasSearched = useRef(false);
+
   /* Selection & panels */
   const [selected, setSelected] = useState([]);
   const [detailId, setDetailId] = useState(null);
@@ -45,10 +49,18 @@ export default function TestApp() {
   /* Gene management */
   const addGene = useCallback((gene) => {
     setGenes((prev) => [...prev, gene]);
+    if (hasSearched.current) setStale(true);
   }, []);
 
   const removeGene = useCallback((hugo) => {
     setGenes((prev) => prev.filter((g) => g.hugo !== hugo));
+    if (hasSearched.current) setStale(true);
+  }, []);
+
+  /* Wrap filter changes to also mark stale */
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+    if (hasSearched.current) setStale(true);
   }, []);
 
   /* Run ranking — passes scoring_method */
@@ -66,6 +78,8 @@ export default function TestApp() {
         scoring_method: scoringMethod,
       });
       setResults(res.results);
+      hasSearched.current = true;
+      setStale(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -129,7 +143,7 @@ export default function TestApp() {
                 <button
                   key={m.value}
                   className={`${styles.methodBtn} ${scoringMethod === m.value ? styles.methodActive : ""}`}
-                  onClick={() => setScoringMethod(m.value)}
+                  onClick={() => { setScoringMethod(m.value); if (hasSearched.current) setStale(true); }}
                 >
                   {m.label}
                 </button>
@@ -143,7 +157,7 @@ export default function TestApp() {
           </div>
 
           <div className={styles.sidebarSection}>
-            <FilterPanel filters={filters} onChange={setFilters} />
+            <FilterPanel filters={filters} onChange={handleFilterChange} />
           </div>
 
           <div className={styles.sidebarSection}>
@@ -183,6 +197,12 @@ export default function TestApp() {
                 Search for target genes on the left, pick a scoring method, then click
                 "Find Cell Lines" to rank cell lines by multi-omics expression.
               </p>
+            </div>
+          )}
+
+          {stale && results && (
+            <div className={styles.staleBanner}>
+              Search parameters changed — click <b>Find Cell Lines</b> to update results.
             </div>
           )}
 
