@@ -132,16 +132,18 @@ export default function SearchBar({ genes, onAddGene, onRemoveGene }) {
         </div>
 
         {/* Direction toggle */}
-        <div className={styles.dirToggle}>
+        <div className={styles.dirToggle} title="HIGH = rank cell lines with high expression first&#10;LOW = rank cell lines with low expression first">
           <button
             className={`${styles.dirBtn} ${direction === "high" ? styles.dirBtnActiveHigh : ""}`}
             onClick={() => setDirection("high")}
+            title="Rank cell lines with HIGH expression of this gene first"
           >
             HIGH
           </button>
           <button
             className={`${styles.dirBtn} ${direction === "low" ? styles.dirBtnActiveLow : ""}`}
             onClick={() => setDirection("low")}
+            title="Rank cell lines with LOW expression of this gene first"
           >
             LOW
           </button>
@@ -150,6 +152,10 @@ export default function SearchBar({ genes, onAddGene, onRemoveGene }) {
         <button className={styles.addBtn} onClick={() => query.trim() && addGene(query.trim())}>
           Add
         </button>
+      </div>
+      <div style={{ fontSize: "11px", color: "#888", marginTop: "4px", lineHeight: "1.6" }}>
+        <div>HIGH = prefer cell lines with high expression</div>
+        <div>LOW = prefer cell lines with low expression</div>
       </div>
     </div>
   );

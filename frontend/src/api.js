@@ -79,6 +79,10 @@ export function getLineages() {
   return request(`${BASE}/filters/lineages`);
 }
 
+export function getDiseaseLineageMapping() {
+  return request(`${BASE}/filters/disease-lineage-mapping`);
+}
+
 /* ── Chat agent ───────────────────────────────────────────── */
 
 export function chatWithAgent(message, history = null) {

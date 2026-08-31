@@ -113,7 +113,7 @@ def get_mutated_cell_lines(ensembl_id: str) -> set[str]:
 # ── Fusion queries ────────────────────────────────────────────
 
 def get_fusions_for_gene(hugo: str) -> list[dict]:
-    """Get fusions involving a gene (as gene1 or gene2), high/medium confidence only.
+    """Get fusions involving a gene (as gene1 or gene2), any confidence level.
     Matches on HUGO symbol because the ensg columns in fact_fusions store
     'SYMBOL (ENSG.version)' strings, not bare Ensembl IDs."""
     return query(
@@ -126,21 +126,19 @@ def get_fusions_for_gene(hugo: str) -> list[dict]:
                reading_frame, supporting_reads
         FROM fact_fusions
         WHERE (CAST(gene1_hugo AS VARCHAR) = ? OR CAST(gene2_hugo AS VARCHAR) = ?)
-          AND CAST(confidence AS VARCHAR) IN ('high', 'medium')
         """,
         [hugo, hugo],
     )
 
 
 def get_fused_cell_lines(hugo: str) -> set[str]:
-    """Get set of ach_ids that have fusions involving this gene.
+    """Get set of ach_ids that have fusions involving this gene (any confidence).
     Matches on HUGO symbol (see note in get_fusions_for_gene)."""
     rows = query(
         """
         SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
         FROM fact_fusions
         WHERE (CAST(gene1_hugo AS VARCHAR) = ? OR CAST(gene2_hugo AS VARCHAR) = ?)
-          AND CAST(confidence AS VARCHAR) IN ('high', 'medium')
         """,
         [hugo, hugo],
     )
@@ -270,6 +268,24 @@ def get_lineages() -> list[str]:
         """
     )
     return [r["lineage"] for r in rows if r["lineage"]]
+
+
+def get_disease_lineage_mapping() -> list[dict]:
+    """Return all distinct (disease, lineage) pairs for linked dropdown filtering."""
+    rows = query(
+        """
+        SELECT DISTINCT
+            CAST(primary_disease AS VARCHAR) AS disease,
+            CAST(lineage AS VARCHAR) AS lineage
+        FROM dim_cell_lines
+        WHERE primary_disease IS NOT NULL
+          AND CAST(primary_disease AS VARCHAR) != ''
+          AND lineage IS NOT NULL
+          AND CAST(lineage AS VARCHAR) != ''
+        ORDER BY disease, lineage
+        """
+    )
+    return [r for r in rows if r["disease"] and r["lineage"]]
 
 
 # ── Evidence breakdown (per-source scoring) ──────────────────
