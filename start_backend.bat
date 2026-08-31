@@ -1,13 +1,13 @@
 @echo off
-REM ── Start CellLineFinder backend (FastAPI on port 8000) ──
+echo Starting CellLineFinder Backend...
 cd /d "%~dp0backend_api"
-call "%~dp0venv\Scripts\activate.bat"
-echo.
-echo ============================================
-echo   Starting BACKEND  ->  http://localhost:8000
-echo   Keep this window open while using the app.
-echo   Press Ctrl+C to stop.
-echo ============================================
-echo.
-python run.py
+if exist venv\Scripts\activate.bat (
+    call venv\Scripts\activate.bat
+) else (
+    echo ERROR: No venv found. Run: python -m venv venv
+    pause
+    exit /b 1
+)
+pip install -r requirements.txt --quiet
+uvicorn app.main:app --reload --port 8000
 pause

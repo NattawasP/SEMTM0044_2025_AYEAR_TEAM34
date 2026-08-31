@@ -4,6 +4,7 @@ import FilterPanel from "./components/FilterPanel/FilterPanel.jsx";
 import ResultsTable from "./components/ResultsTable/ResultsTable.jsx";
 import DetailPanel from "./components/DetailPanel/DetailPanel.jsx";
 import CompareView from "./components/CompareView/CompareView.jsx";
+import ChatWidget from "./components/ChatWidget/ChatWidget.jsx";
 import { rankCellLines } from "./api";
 import styles from "./App.module.css";
 
@@ -17,7 +18,7 @@ const DEFAULT_FILTERS = {
   lineage_filter: null,
   core_only: false,
   top_n: 20,
-  sources: ["depmap", "hpa", "geo", "protein"],
+  sources: ["depmap", "hpa", "geo"],
 };
 
 export default function App() {
@@ -48,6 +49,10 @@ export default function App() {
 
   const removeGene = useCallback((hugo) => {
     setGenes((prev) => prev.filter((g) => g.hugo !== hugo));
+  }, []);
+
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters(newFilters);
   }, []);
 
   /* Run ranking */
@@ -165,7 +170,7 @@ export default function App() {
           </div>
 
           <div className={styles.sidebarSection}>
-            <FilterPanel filters={filters} onChange={setFilters} />
+            <FilterPanel filters={filters} onChange={handleFilterChange} />
           </div>
 
           <div className={styles.sidebarSection}>
@@ -287,6 +292,9 @@ export default function App() {
           onClose={() => setShowCompare(false)}
         />
       )}
+
+      {/* Chat widget */}
+      <ChatWidget />
     </div>
   );
 }

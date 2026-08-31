@@ -170,7 +170,7 @@ def combine_rna_protein(
     rows = []
     for ach in all_ids:
         if ach is None or (isinstance(ach, float) and np.isnan(ach)):
-            continue  
+            continue
         has_rna = ach in expr_norm.index and not np.isnan(expr_norm.get(ach, np.nan))
         has_prot = ach in prot_norm.index and not np.isnan(prot_norm.get(ach, np.nan))
 
@@ -313,7 +313,7 @@ def run_ranking(
         combined = apply_instability_filter(combined, msi_max, cin_max)
         combined = apply_metabolite_filter(combined, exclude_metabolite, metabolite_threshold)
         combined = apply_mirna_filter(combined, exclude_mirna, mirna_threshold)
-        
+
         combined_per_gene[gene["hugo"]] = combined
 
     # 5. Multi-gene combination

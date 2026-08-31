@@ -1,12 +1,9 @@
 @echo off
-REM ── Start CellLineFinder frontend (Vite on port 3000) ──
+echo Starting CellLineFinder Frontend...
 cd /d "%~dp0frontend"
-echo.
-echo ============================================
-echo   Starting FRONTEND ->  http://localhost:3000
-echo   Keep this window open while using the app.
-echo   Press Ctrl+C to stop.
-echo ============================================
-echo.
-call npm run dev
+if not exist node_modules (
+    echo Installing dependencies...
+    npm install
+)
+npm run dev
 pause

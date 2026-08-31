@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { getDiseases, getLineages } from "../../api";
+import { useState, useEffect, useMemo } from "react";
+import { getDiseases, getLineages, getDiseaseLineageMapping } from "../../api";
 import styles from "./FilterPanel.module.css";
 
 const MODE_OPTIONS = ["ignore", "include", "exclude"];
@@ -11,21 +11,53 @@ const DATA_SOURCES = [
 ];
 
 export default function FilterPanel({ filters, onChange }) {
-  const [diseases, setDiseases] = useState([]);
-  const [lineages, setLineages] = useState([]);
+  const [allDiseases, setAllDiseases] = useState([]);
+  const [allLineages, setAllLineages] = useState([]);
+  const [mapping, setMapping] = useState([]);   // [{disease, lineage}, ...]
 
-  /* Load dropdown options once */
+  /* Load dropdown options + mapping once */
   useEffect(() => {
     getDiseases()
-      .then((d) => setDiseases(d.values || []))
+      .then((d) => setAllDiseases(d.values || []))
       .catch((err) => console.error("Failed to load diseases:", err));
     getLineages()
-      .then((d) => setLineages(d.values || []))
+      .then((d) => setAllLineages(d.values || []))
       .catch((err) => console.error("Failed to load lineages:", err));
+    getDiseaseLineageMapping()
+      .then((d) => setMapping(d.pairs || []))
+      .catch((err) => console.error("Failed to load mapping:", err));
   }, []);
 
+  /* One-way: disease → lineage (selecting a disease filters lineage options) */
+  const diseases = allDiseases;
+
+  const lineages = useMemo(() => {
+    if (!filters.disease_filter) return allLineages;
+    const valid = new Set(
+      mapping.filter((p) => p.disease === filters.disease_filter).map((p) => p.lineage)
+    );
+    return allLineages.filter((l) => valid.has(l));
+  }, [allLineages, mapping, filters.disease_filter]);
+
   function set(key, value) {
-    onChange({ ...filters, [key]: value });
+    const next = { ...filters, [key]: value };
+
+    // When disease changes, reset lineage if it's no longer valid
+    if (key === "disease_filter") {
+      if (value === null) {
+        // Clearing disease also clears lineage
+        next.lineage_filter = null;
+      } else if (filters.lineage_filter) {
+        const validLineages = new Set(
+          mapping.filter((p) => p.disease === value).map((p) => p.lineage)
+        );
+        if (!validLineages.has(filters.lineage_filter)) {
+          next.lineage_filter = null;
+        }
+      }
+    }
+
+    onChange(next);
   }
 
   return (
@@ -35,7 +67,10 @@ export default function FilterPanel({ filters, onChange }) {
       <div className={styles.grid}>
         {/* Data sources to include */}
         <div className={styles.field}>
-          <label className={styles.label}>Data Sources</label>
+          <label className={styles.label}>RNA Sources Used for Scoring</label>
+          <span style={{ fontSize: "11px", color: "#888", marginTop: "-4px", display: "block" }}>
+            Only selected sources are used in the ranking calculation
+          </span>
           <div className={styles.sourceChecks}>
             {DATA_SOURCES.map((src) => {
               const sources = filters.sources || ["depmap", "hpa", "geo"];

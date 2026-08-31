@@ -22,3 +22,10 @@ def list_lineages():
     """Return all distinct lineage values for the dropdown."""
     values = data_service.get_lineages()
     return FilterOptions(values=values, count=len(values))
+
+
+@router.get("/disease-lineage-mapping")
+def disease_lineage_mapping():
+    """Return all (disease, lineage) pairs for linked dropdown filtering."""
+    pairs = data_service.get_disease_lineage_mapping()
+    return {"pairs": pairs}

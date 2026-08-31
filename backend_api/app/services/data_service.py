@@ -113,7 +113,7 @@ def get_mutated_cell_lines(ensembl_id: str) -> set[str]:
 # ── Fusion queries ────────────────────────────────────────────
 
 def get_fusions_for_gene(hugo: str) -> list[dict]:
-    """Get fusions involving a gene (as gene1 or gene2), high/medium confidence only.
+    """Get fusions involving a gene (as gene1 or gene2), any confidence level.
     Matches on HUGO symbol because the ensg columns in fact_fusions store
     'SYMBOL (ENSG.version)' strings, not bare Ensembl IDs."""
     return query(
@@ -126,21 +126,19 @@ def get_fusions_for_gene(hugo: str) -> list[dict]:
                reading_frame, supporting_reads
         FROM fact_fusions
         WHERE (CAST(gene1_hugo AS VARCHAR) = ? OR CAST(gene2_hugo AS VARCHAR) = ?)
-          AND CAST(confidence AS VARCHAR) IN ('high', 'medium')
         """,
         [hugo, hugo],
     )
 
 
 def get_fused_cell_lines(hugo: str) -> set[str]:
-    """Get set of ach_ids that have fusions involving this gene.
+    """Get set of ach_ids that have fusions involving this gene (any confidence).
     Matches on HUGO symbol (see note in get_fusions_for_gene)."""
     rows = query(
         """
         SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
         FROM fact_fusions
         WHERE (CAST(gene1_hugo AS VARCHAR) = ? OR CAST(gene2_hugo AS VARCHAR) = ?)
-          AND CAST(confidence AS VARCHAR) IN ('high', 'medium')
         """,
         [hugo, hugo],
     )
@@ -272,6 +270,24 @@ def get_lineages() -> list[str]:
     return [r["lineage"] for r in rows if r["lineage"]]
 
 
+def get_disease_lineage_mapping() -> list[dict]:
+    """Return all distinct (disease, lineage) pairs for linked dropdown filtering."""
+    rows = query(
+        """
+        SELECT DISTINCT
+            CAST(primary_disease AS VARCHAR) AS disease,
+            CAST(lineage AS VARCHAR) AS lineage
+        FROM dim_cell_lines
+        WHERE primary_disease IS NOT NULL
+          AND CAST(primary_disease AS VARCHAR) != ''
+          AND lineage IS NOT NULL
+          AND CAST(lineage AS VARCHAR) != ''
+        ORDER BY disease, lineage
+        """
+    )
+    return [r for r in rows if r["disease"] and r["lineage"]]
+
+
 # ── Evidence breakdown (per-source scoring) ──────────────────
 
 EXPRESSION_SOURCES = [
@@ -344,6 +360,8 @@ def get_evidence_for_cell_line(
                 continue
 
             tpm_val = float(tpm_series[ach_id])
+            if pd.isna(tpm_val):
+                continue
 
             # Z-score
             z_values = stats.zscore(tpm_series, nan_policy="omit")
@@ -356,11 +374,13 @@ def get_evidence_for_cell_line(
 
             # Z-Score rank (rank 1 = best for HIGH, rank 1 = lowest for LOW)
             z_rank_series = z_series.rank(ascending=ascending, method="min")
-            z_rank = int(z_rank_series[ach_id])
+            z_rank_raw = z_rank_series[ach_id]
+            z_rank = int(z_rank_raw) if pd.notna(z_rank_raw) else None
 
             # Percentile rank
             pct_rank_series = tpm_series.rank(ascending=ascending, method="min")
-            pct_rank = int(pct_rank_series[ach_id])
+            pct_rank_raw = pct_rank_series[ach_id]
+            pct_rank = int(pct_rank_raw) if pd.notna(pct_rank_raw) else None
 
             # For RRF ensemble
             rank_dict[f"{src_name}_zscore"] = z_rank_series
@@ -389,11 +409,14 @@ def get_evidence_for_cell_line(
             rrf_scores = pd.Series(0.0, index=list(all_ids))
             for ranks in rank_dict.values():
                 for idx in ranks.index:
-                    rrf_scores[idx] += 1.0 / (RRF_K + ranks[idx])
+                    rank_val = ranks[idx]
+                    if pd.notna(rank_val):
+                        rrf_scores[idx] += 1.0 / (RRF_K + rank_val)
 
             rrf_ranked = rrf_scores.rank(ascending=False, method="min")
             if ach_id in rrf_ranked.index:
-                gene_data["expression_rank"] = int(rrf_ranked[ach_id])
+                rrf_val = rrf_ranked[ach_id]
+                gene_data["expression_rank"] = int(rrf_val) if pd.notna(rrf_val) else None
                 gene_data["expression_total"] = len(rrf_ranked)
 
         # Mutations for this gene + cell line
@@ -416,36 +439,39 @@ def get_evidence_for_cell_line(
         if len(prot_df) >= 2:
             intensity_series = prot_df.set_index("ach_id")["protein_intensity"]
             if ach_id in intensity_series.index:
-                has_protein = True
                 intensity_val = float(intensity_series[ach_id])
-                total_cls = len(intensity_series)
+                if pd.notna(intensity_val):
+                    has_protein = True
+                    total_cls = len(intensity_series)
 
-                # Z-score
-                z_values = stats.zscore(intensity_series, nan_policy="omit")
-                z_series = pd.Series(z_values, index=intensity_series.index) if not isinstance(z_values, pd.Series) else z_values
-                z_val = float(z_series[ach_id])
+                    # Z-score
+                    z_values = stats.zscore(intensity_series, nan_policy="omit")
+                    z_series = pd.Series(z_values, index=intensity_series.index) if not isinstance(z_values, pd.Series) else z_values
+                    z_val = float(z_series[ach_id])
 
-                # Z-score rank
-                z_rank_series = z_series.rank(ascending=False, method="min")
-                z_rank = int(z_rank_series[ach_id])
+                    # Z-score rank
+                    z_rank_series = z_series.rank(ascending=False, method="min")
+                    z_rank_raw = z_rank_series[ach_id]
+                    z_rank = int(z_rank_raw) if pd.notna(z_rank_raw) else None
 
-                # Percentile
-                pct_series = intensity_series.rank(pct=True, method="average")
-                pct_val = float(pct_series[ach_id]) * 100
+                    # Percentile
+                    pct_series = intensity_series.rank(pct=True, method="average")
+                    pct_val = float(pct_series[ach_id]) * 100
 
-                # Percentile rank
-                pct_rank_series = intensity_series.rank(ascending=False, method="min")
-                pct_rank = int(pct_rank_series[ach_id])
+                    # Percentile rank
+                    pct_rank_series = intensity_series.rank(ascending=False, method="min")
+                    pct_rank_raw = pct_rank_series[ach_id]
+                    pct_rank = int(pct_rank_raw) if pd.notna(pct_rank_raw) else None
 
-                protein_data = {
-                    "intensity": round(intensity_val, 2),
-                    "z_score": round(z_val, 2),
-                    "z_rank": z_rank,
-                    "percentile": round(pct_val, 1),
-                    "pct_rank": pct_rank,
-                    "rank": z_rank,
-                    "total": total_cls,
-                }
+                    protein_data = {
+                        "intensity": round(intensity_val, 2),
+                        "z_score": round(z_val, 2) if pd.notna(z_val) else None,
+                        "z_rank": z_rank,
+                        "percentile": round(pct_val, 1) if pd.notna(pct_val) else None,
+                        "pct_rank": pct_rank,
+                        "rank": z_rank,
+                        "total": total_cls,
+                    }
 
     result["protein"] = protein_data
     result["mutations"] = all_mutations

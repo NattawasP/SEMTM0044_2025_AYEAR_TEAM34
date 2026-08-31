@@ -1,9 +1,10 @@
 /* ── App layout — two-column: sidebar left, results right ── */
 
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ── Header ──────────────────────────────────────────────── */
@@ -17,6 +18,7 @@
   z-index: 10;
   flex-wrap: wrap;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .headerLeft {
@@ -166,6 +168,25 @@
   color: #2d6a4f;
 }
 
+/* Stale-results banner */
+.staleBanner {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #6d4c00;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.staleBanner::before {
+  content: "\26A0";
+  font-size: 16px;
+}
+
 /* Empty state */
 .emptyState {
   display: flex;
@@ -217,6 +238,7 @@
 @media (max-width: 768px) {
   .main {
     flex-direction: column;
+    min-height: 0;
   }
 
   .sidebar {
@@ -224,13 +246,16 @@
     min-width: unset;
     border-right: none;
     border-bottom: 1px solid #e8e4dd;
-    max-height: none;
-    overflow-y: visible;
+    max-height: 45vh;
+    overflow-y: auto;
+    flex-shrink: 0;
   }
 
   .content {
     padding: 16px;
     overflow-y: auto;
+    flex: 1;
+    min-height: 0;
   }
 
   .header {

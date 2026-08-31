@@ -66,7 +66,7 @@ def _build_expression() -> pd.DataFrame:
         WHERE CAST(ensembl_id AS VARCHAR) IN ({placeholders})
         GROUP BY ach_id, ensembl_id
     """, top_genes)
-    
+
     return _scale(long.pivot(index="ach_id", columns="ensembl_id", values="v"))
 
 

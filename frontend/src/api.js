@@ -78,3 +78,17 @@ export function getDiseases() {
 export function getLineages() {
   return request(`${BASE}/filters/lineages`);
 }
+
+export function getDiseaseLineageMapping() {
+  return request(`${BASE}/filters/disease-lineage-mapping`);
+}
+
+/* ── Chat agent ───────────────────────────────────────────── */
+
+export function chatWithAgent(message, history = null) {
+  return request(`${BASE}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, history }),
+  });
+}
