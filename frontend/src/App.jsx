@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import SearchBar from "./components/SearchBar/SearchBar.jsx";
 import FilterPanel from "./components/FilterPanel/FilterPanel.jsx";
 import ResultsTable from "./components/ResultsTable/ResultsTable.jsx";
@@ -12,6 +12,7 @@ const DEFAULT_FILTERS = {
   w_rna: 0.7,
   w_protein: 0.3,
   mutation_mode: "ignore",
+  driver_only: false,
   fusion_mode: "ignore",
   disease_filter: null,
   lineage_filter: null,
@@ -29,10 +30,12 @@ export default function App() {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  /* Stale-results tracking: true when genes/filters changed since last search */
-  const [stale, setStale] = useState(false);
-  const hasSearched = useRef(false);
+  // Snapshot of filters at the time of the last successful search — used to
+  // detect when the current filters differ, so we can prompt the user to
+  // refresh the results.
+  const [lastSearchedFilters, setLastSearchedFilters] = useState(null);
+  // Genes at the time of the last successful search — same purpose.
+  const [lastSearchedGenes, setLastSearchedGenes] = useState(null);
 
   /* Selection & panels */
   const [selected, setSelected] = useState([]);
@@ -42,18 +45,14 @@ export default function App() {
   /* Gene management */
   const addGene = useCallback((gene) => {
     setGenes((prev) => [...prev, gene]);
-    if (hasSearched.current) setStale(true);
   }, []);
 
   const removeGene = useCallback((hugo) => {
     setGenes((prev) => prev.filter((g) => g.hugo !== hugo));
-    if (hasSearched.current) setStale(true);
   }, []);
 
-  /* Wrap filter changes to also mark stale */
   const handleFilterChange = useCallback((newFilters) => {
     setFilters(newFilters);
-    if (hasSearched.current) setStale(true);
   }, []);
 
   /* Run ranking */
@@ -65,13 +64,20 @@ export default function App() {
     setSelected([]);
 
     try {
+      // Protein is always included in scoring (only the 3 RNA sources are
+      // user-toggleable), so ensure "protein" is always in sources.
+      const sourcesWithProtein = filters.sources.includes("protein")
+        ? filters.sources
+        : [...filters.sources, "protein"];
+
       const res = await rankCellLines({
         genes: genes.map((g) => ({ hugo: g.hugo, direction: g.direction })),
         ...filters,
+        sources: sourcesWithProtein,
       });
       setResults(res.results);
-      hasSearched.current = true;
-      setStale(false);
+      setLastSearchedFilters(filters);
+      setLastSearchedGenes(genes);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -95,16 +101,47 @@ export default function App() {
   }
 
   function handleSelectAll(selectAll) {
-    if (!results) return;
-    setSelected(selectAll ? results.map((r) => r.ach_id) : []);
+    if (!displayedResults) return;
+    setSelected(selectAll ? displayedResults.map((r) => r.ach_id) : []);
   }
+
+  // Apply the "Driver only" filter on the client after ranking. Only active
+  // when Mutation Filter = Include and Driver only is checked. Ranks are
+  // recomputed so the displayed list is contiguous (1, 2, 3, ...).
+  const displayedResults = useMemo(() => {
+    if (!results) return null;
+    const shouldFilter =
+      filters.mutation_mode === "include" && filters.driver_only;
+    if (!shouldFilter) return results;
+    const filtered = results.filter(
+      (r) => Array.isArray(r.mutations) && r.mutations.some((m) => m.is_driver)
+    );
+    return filtered.map((r, i) => ({ ...r, rank: i + 1 }));
+  }, [results, filters.mutation_mode, filters.driver_only]);
 
   /* Highest score in the current results — used so the detail panel can colour
      its score with the same ratio-based thresholds as the results table. */
   const maxScore =
-    results && results.length > 0
-      ? Math.max(...results.map((r) => r.score))
+    displayedResults && displayedResults.length > 0
+      ? Math.max(...displayedResults.map((r) => r.score))
       : 0;
+
+  /* Detect pending changes: filters (or gene list) differ from the last search.
+     driver_only is excluded because it filters live on the frontend and doesn't
+     need a re-search. */
+  const hasPendingChanges = useMemo(() => {
+    if (!results || !lastSearchedFilters) return false;
+    const stripDriverOnly = (f) => {
+      const { driver_only, ...rest } = f;
+      return rest;
+    };
+    const filtersChanged =
+      JSON.stringify(stripDriverOnly(filters)) !==
+      JSON.stringify(stripDriverOnly(lastSearchedFilters));
+    const genesChanged =
+      JSON.stringify(genes) !== JSON.stringify(lastSearchedGenes);
+    return filtersChanged || genesChanged;
+  }, [filters, lastSearchedFilters, genes, lastSearchedGenes, results]);
 
   return (
     <div className={styles.app}>
@@ -150,13 +187,63 @@ export default function App() {
 
         {/* ── Right content: Results ── */}
         <main className={styles.content}>
-          {results && results.length > 0 && (
+          {displayedResults && displayedResults.length > 0 && (
             <div className={styles.resultsHeader}>
               <h2 className={styles.resultsTitle}>Results</h2>
-              <span className={styles.resultsMeta}>
-                Showing <b>{results.length}</b> cell lines · Ranked by{" "}
-                <b>Z-Score + Percentile RRF</b>
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginLeft: "auto" }}>
+                {hasPendingChanges && (
+                  <span style={{ fontSize: "13px", color: "#f0b429", fontWeight: 500 }}>
+                    Filters changed — refresh to update
+                  </span>
+                )}
+                <button
+                  onClick={handleSearch}
+                  disabled={loading || genes.length === 0}
+                  style={{
+                    padding: "6px 14px",
+                    fontSize: "13px",
+                    borderRadius: "6px",
+                    border: hasPendingChanges ? "1px solid #f0b429" : "1px solid #ccc",
+                    background: hasPendingChanges ? "#fff8e6" : "#fff",
+                    color: hasPendingChanges ? "#b8860b" : "#555",
+                    cursor: loading ? "wait" : "pointer",
+                    fontWeight: hasPendingChanges ? 600 : 400,
+                  }}
+                >
+                  {loading ? "Refreshing..." : "↻ Refresh"}
+                </button>
+                <span className={styles.resultsMeta}>
+                  Showing <b>{displayedResults.length}</b> cell lines · Ranked by{" "}
+                  <b>Z-Score + Percentile RRF</b>
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Empty-state: a search was run but no cell lines matched. */}
+          {results && (!displayedResults || displayedResults.length === 0) && !loading && (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}>🔍</div>
+              <div className={styles.emptyTitle}>No cell lines match your search criteria</div>
+              {hasPendingChanges && (
+                <button
+                  onClick={handleSearch}
+                  disabled={loading || genes.length === 0}
+                  style={{
+                    marginTop: "12px",
+                    padding: "8px 16px",
+                    fontSize: "13px",
+                    borderRadius: "6px",
+                    border: "1px solid #f0b429",
+                    background: "#fff8e6",
+                    color: "#b8860b",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  ↻ Refresh with current filters
+                </button>
+              )}
             </div>
           )}
 
@@ -171,19 +258,15 @@ export default function App() {
             </div>
           )}
 
-          {stale && results && (
-            <div className={styles.staleBanner}>
-              Search parameters changed — click <b>Find Cell Lines</b> to update results.
-            </div>
-          )}
-
           <ResultsTable
-            results={results}
+            results={displayedResults}
             loading={loading}
             selected={selected}
             onToggleSelect={handleToggleSelect}
             onSelectAll={handleSelectAll}
             onRowClick={setDetailId}
+            mutationMode={filters.mutation_mode}
+            fusionMode={filters.fusion_mode}
           />
         </main>
       </div>
@@ -193,7 +276,7 @@ export default function App() {
         <DetailPanel
           achId={detailId}
           genes={genes}
-          resultRow={results?.find((r) => r.ach_id === detailId)}
+          resultRow={displayedResults?.find((r) => r.ach_id === detailId)}
           maxScore={maxScore}
           wRna={filters.w_rna}
           wProtein={filters.w_protein}

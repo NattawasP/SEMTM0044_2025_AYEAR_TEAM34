@@ -8,3 +8,4 @@ pydantic>=2.0.0
 pyarrow>=14.0.0
 openai>=1.30.0
 python-dotenv>=1.0.0
+scikit-learn>=1.9.0

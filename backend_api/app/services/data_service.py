@@ -112,8 +112,10 @@ def get_mutated_cell_lines(ensembl_id: str) -> set[str]:
 
 # ── Fusion queries ────────────────────────────────────────────
 
-def get_fusions_for_gene(ensembl_id: str) -> list[dict]:
-    """Get fusions involving a gene (as gene1 or gene2), any confidence level."""
+def get_fusions_for_gene(hugo: str) -> list[dict]:
+    """Get fusions involving a gene (as gene1 or gene2), high/medium confidence only.
+    Matches on HUGO symbol because the ensg columns in fact_fusions store
+    'SYMBOL (ENSG.version)' strings, not bare Ensembl IDs."""
     return query(
         """
         SELECT CAST(ach_id AS VARCHAR) AS ach_id,
@@ -123,26 +125,28 @@ def get_fusions_for_gene(ensembl_id: str) -> list[dict]:
                CAST(confidence AS VARCHAR) AS confidence,
                reading_frame, supporting_reads
         FROM fact_fusions
-        WHERE (CAST(gene1_ensg AS VARCHAR) = ? OR CAST(gene2_ensg AS VARCHAR) = ?)
+        WHERE (CAST(gene1_hugo AS VARCHAR) = ? OR CAST(gene2_hugo AS VARCHAR) = ?)
+          AND CAST(confidence AS VARCHAR) IN ('high', 'medium')
         """,
-        [ensembl_id, ensembl_id],
+        [hugo, hugo],
     )
 
 
-def get_fused_cell_lines(ensembl_id: str) -> set[str]:
-    """Get set of ach_ids that have fusions involving this gene (any confidence)."""
+def get_fused_cell_lines(hugo: str) -> set[str]:
+    """Get set of ach_ids that have fusions involving this gene.
+    Matches on HUGO symbol (see note in get_fusions_for_gene)."""
     rows = query(
         """
         SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
         FROM fact_fusions
-        WHERE (CAST(gene1_ensg AS VARCHAR) = ? OR CAST(gene2_ensg AS VARCHAR) = ?)
+        WHERE (CAST(gene1_hugo AS VARCHAR) = ? OR CAST(gene2_hugo AS VARCHAR) = ?)
+          AND CAST(confidence AS VARCHAR) IN ('high', 'medium')
         """,
-        [ensembl_id, ensembl_id],
+        [hugo, hugo],
     )
     return {r["ach_id"] for r in rows}
 
-
-# ── Instability / Metabolite / miRNA queries ─────────────────
+# ── Non-gene-expression exclusion queries ─────────────────────
 
 def get_unstable_cell_lines(msi_max: float | None, cin_max: float | None) -> set[str]:
     """Cell lines exceeding the given genomic instability thresholds."""
@@ -405,7 +409,7 @@ def get_evidence_for_cell_line(
         all_mutations.extend(cl_muts)
 
         # Fusions for this gene + cell line
-        gene_fusions = get_fusions_for_gene(ensg)
+        gene_fusions = get_fusions_for_gene(hugo)
         cl_fusions = [f for f in gene_fusions if f["ach_id"] == ach_id]
         all_fusions.extend(cl_fusions)
 
