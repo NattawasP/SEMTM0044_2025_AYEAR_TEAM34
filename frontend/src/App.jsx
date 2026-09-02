@@ -16,6 +16,8 @@ const DEFAULT_FILTERS = {
   fusion_mode: "ignore",
   disease_filter: null,
   lineage_filter: null,
+  subtype_filter: null,
+  filter_mode: "filter",  // "filter" = hard exclude, "boost" = Q6 soft boost
   core_only: false,
   top_n: 20,
   sources: ["depmap", "hpa", "geo"],
@@ -77,11 +79,25 @@ export default function App() {
         ? filters.sources
         : [...filters.sources, "protein"];
 
-      const res = await rankCellLines({
+      // Route disease/lineage/subtype to filter or boost params based on mode
+      const isBoost = filters.filter_mode === "boost";
+      const apiParams = {
         genes: genes.map((g) => ({ hugo: g.hugo, direction: g.direction })),
         ...filters,
         sources: sourcesWithProtein,
-      });
+        // In boost mode: clear hard filters, set Q6 targets
+        disease_filter: isBoost ? null : filters.disease_filter,
+        lineage_filter: isBoost ? null : filters.lineage_filter,
+        subtype_filter: isBoost ? null : filters.subtype_filter,
+        target_disease: isBoost ? filters.disease_filter : null,
+        target_lineage: isBoost ? filters.lineage_filter : null,
+        target_subtype: isBoost ? filters.subtype_filter : null,
+        q6_boost_enabled: isBoost,
+      };
+      // filter_mode is frontend-only, don't send it
+      delete apiParams.filter_mode;
+
+      const res = await rankCellLines(apiParams);
       setResults(res.results);
       setLastSearchedFilters(filters);
       setLastSearchedGenes(genes);
@@ -275,6 +291,7 @@ export default function App() {
             mutationMode={filters.mutation_mode}
             fusionMode={filters.fusion_mode}
             assayType={filters.assay_type}
+            boostMode={filters.filter_mode === "boost"}
           />
         </main>
       </div>

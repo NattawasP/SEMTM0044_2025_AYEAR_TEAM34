@@ -26,6 +26,11 @@ class RankRequest(BaseModel):
     mirna_threshold: float | None = Field(None, description="Exclude above this level; required if exclude_mirna is set")
     disease_filter: str | None = Field(None, description="Filter by primary_disease")
     lineage_filter: str | None = Field(None, description="Filter by lineage")
+    subtype_filter: str | None = Field(None, description="Filter by Subtype")
+    target_disease: str | None = Field(None, description="Preferred disease for Q6 boost")
+    target_lineage: str | None = Field(None, description="Preferred lineage for Q6 boost")
+    target_subtype: str | None = Field(None, description="Preferred subtype for Q6 boost")
+    q6_boost_enabled: bool = Field(True, description="Enable Q6 soft boost (default on)")
     core_only: bool = Field(False, description="Only cell lines with data in all 3 expression sources")
     top_n: int = Field(20, ge=1, le=200, description="Number of results to return")
     scoring_method: str = Field("rrf", pattern="^(rrf|zscore|percentile)$", description="Scoring method: rrf (ensemble), zscore only, percentile only")
@@ -68,6 +73,9 @@ class RankedCellLine(BaseModel):
     is_core: bool = False
     mutations: list[dict] | None = None
     fusions: list[dict] | None = None
+    q6_score: float | None = None
+    match_level: str | None = None
+    base_score: float | None = None
     q7_status: str | None = None
     q7_warning: str | None = None
 

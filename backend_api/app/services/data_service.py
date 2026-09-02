@@ -251,6 +251,7 @@ def get_cell_lines_metadata(ach_ids: list[str]) -> dict[str, dict]:
                CAST(primary_disease AS VARCHAR) AS primary_disease,
                CAST(lineage AS VARCHAR) AS lineage,
                CAST(lineage_subtype AS VARCHAR) AS lineage_subtype,
+               CAST("Subtype" AS VARCHAR) AS subtype,
                CAST(sex AS VARCHAR) AS sex,
                CAST(growth_pattern AS VARCHAR) AS growth_pattern
         FROM dim_cell_lines
@@ -263,18 +264,32 @@ def get_cell_lines_metadata(ach_ids: list[str]) -> dict[str, dict]:
 
 # ── Filter options ────────────────────────────────────────────
 
+def _normalize_disease(s: str) -> str:
+    """Normalize disease casing: 'Bone cancer' → 'Bone Cancer'."""
+    return " ".join(w.capitalize() for w in s.split())
+
+
 def get_diseases() -> list[str]:
-    """Get distinct disease values."""
+    """Get distinct disease values (case-normalized, no duplicates)."""
     rows = query(
         """
         SELECT DISTINCT CAST(primary_disease AS VARCHAR) AS primary_disease
         FROM dim_cell_lines
         WHERE primary_disease IS NOT NULL
           AND CAST(primary_disease AS VARCHAR) != ''
-        ORDER BY primary_disease
         """
     )
-    return [r["primary_disease"] for r in rows if r["primary_disease"]]
+    seen = set()
+    result = []
+    for r in rows:
+        d = r["primary_disease"]
+        if not d:
+            continue
+        n = _normalize_disease(d)
+        if n not in seen:
+            seen.add(n)
+            result.append(n)
+    return sorted(result)
 
 
 def get_lineages() -> list[str]:
@@ -289,6 +304,20 @@ def get_lineages() -> list[str]:
         """
     )
     return [r["lineage"] for r in rows if r["lineage"]]
+
+
+def get_subtypes() -> list[str]:
+    """Get distinct Subtype values."""
+    rows = query(
+        """
+        SELECT DISTINCT CAST("Subtype" AS VARCHAR) AS subtype
+        FROM dim_cell_lines
+        WHERE "Subtype" IS NOT NULL
+          AND CAST("Subtype" AS VARCHAR) != ''
+        ORDER BY subtype
+        """
+    )
+    return [r["subtype"] for r in rows if r["subtype"]]
 
 
 def get_disease_lineage_mapping() -> list[dict]:
@@ -306,7 +335,49 @@ def get_disease_lineage_mapping() -> list[dict]:
         ORDER BY disease, lineage
         """
     )
-    return [r for r in rows if r["disease"] and r["lineage"]]
+    return [{"disease": _normalize_disease(r["disease"]), "lineage": r["lineage"]}
+            for r in rows if r["disease"] and r["lineage"]]
+
+
+def get_disease_lineage_subtype_mapping() -> list[dict]:
+    """Return all distinct (disease, lineage, subtype) triples for cascading filters."""
+    rows = query(
+        """
+        SELECT DISTINCT
+            CAST(primary_disease AS VARCHAR) AS disease,
+            CAST(lineage AS VARCHAR) AS lineage,
+            CAST("Subtype" AS VARCHAR) AS subtype
+        FROM dim_cell_lines
+        WHERE primary_disease IS NOT NULL
+          AND CAST(primary_disease AS VARCHAR) != ''
+          AND lineage IS NOT NULL
+          AND CAST(lineage AS VARCHAR) != ''
+          AND "Subtype" IS NOT NULL
+          AND CAST("Subtype" AS VARCHAR) != ''
+        ORDER BY disease, lineage, subtype
+        """
+    )
+    return [{"disease": _normalize_disease(r["disease"]),
+             "lineage": r["lineage"],
+             "subtype": r["subtype"]}
+            for r in rows if r["disease"] and r["lineage"] and r["subtype"]]
+
+
+# ── Full dim table (for Q6 scoring) ────────────────────────────
+
+def get_full_dim() -> pd.DataFrame:
+    """Return full dim_cell_lines including Subtype for Q6 scoring."""
+    return query_df(
+        """
+        SELECT CAST(ach_id AS VARCHAR) AS ach_id,
+            cell_line_name,
+            CAST(primary_disease AS VARCHAR) AS primary_disease,
+            CAST(lineage AS VARCHAR) AS lineage,
+            CAST("Subtype" AS VARCHAR) AS Subtype,
+            CAST(growth_pattern AS VARCHAR) AS growth_pattern
+        FROM dim_cell_lines
+        """
+    )
 
 
 # ── Evidence breakdown (per-source scoring) ──────────────────

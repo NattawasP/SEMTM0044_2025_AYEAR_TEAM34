@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { getDiseases, getLineages, getDiseaseLineageMapping } from "../../api";
+import { getDiseases, getLineages, getDiseaseLineageMapping, getSubtypes, getDiseaseLineageSubtypeMapping } from "../../api";
 import styles from "./FilterPanel.module.css";
 
 const MODE_OPTIONS = ["ignore", "include", "exclude"];
@@ -21,7 +21,9 @@ const DATA_SOURCES = [
 export default function FilterPanel({ filters, onChange }) {
   const [allDiseases, setAllDiseases] = useState([]);
   const [allLineages, setAllLineages] = useState([]);
+  const [allSubtypes, setAllSubtypes] = useState([]);
   const [mapping, setMapping] = useState([]);
+  const [tripleMapping, setTripleMapping] = useState([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
@@ -31,9 +33,15 @@ export default function FilterPanel({ filters, onChange }) {
     getLineages()
       .then((d) => setAllLineages(d.values || []))
       .catch((err) => console.error("Failed to load lineages:", err));
+    getSubtypes()
+      .then((d) => setAllSubtypes(d.values || []))
+      .catch((err) => console.error("Failed to load subtypes:", err));
     getDiseaseLineageMapping()
       .then((d) => setMapping(d.pairs || []))
       .catch((err) => console.error("Failed to load mapping:", err));
+    getDiseaseLineageSubtypeMapping()
+      .then((d) => setTripleMapping(d.triples || []))
+      .catch((err) => console.error("Failed to load triple mapping:", err));
   }, []);
 
   const diseases = allDiseases;
@@ -45,6 +53,18 @@ export default function FilterPanel({ filters, onChange }) {
     );
     return allLineages.filter((l) => valid.has(l));
   }, [allLineages, mapping, filters.disease_filter]);
+
+  const subtypes = useMemo(() => {
+    let filtered = tripleMapping;
+    if (filters.disease_filter) {
+      filtered = filtered.filter((t) => t.disease === filters.disease_filter);
+    }
+    if (filters.lineage_filter) {
+      filtered = filtered.filter((t) => t.lineage === filters.lineage_filter);
+    }
+    const valid = new Set(filtered.map((t) => t.subtype));
+    return allSubtypes.filter((s) => valid.has(s));
+  }, [allSubtypes, tripleMapping, filters.disease_filter, filters.lineage_filter]);
 
   const advancedCount = useMemo(() => {
     let n = 0;
@@ -69,12 +89,41 @@ export default function FilterPanel({ filters, onChange }) {
     if (key === "disease_filter") {
       if (value === null) {
         next.lineage_filter = null;
-      } else if (filters.lineage_filter) {
-        const validLineages = new Set(
-          mapping.filter((p) => p.disease === value).map((p) => p.lineage)
+        next.subtype_filter = null;
+      } else {
+        // Reset lineage if no longer valid for new disease
+        if (filters.lineage_filter) {
+          const validLineages = new Set(
+            mapping.filter((p) => p.disease === value).map((p) => p.lineage)
+          );
+          if (!validLineages.has(filters.lineage_filter)) {
+            next.lineage_filter = null;
+          }
+        }
+        // Reset subtype if no longer valid
+        if (filters.subtype_filter) {
+          const validSubs = new Set(
+            tripleMapping
+              .filter((t) => t.disease === value && (!next.lineage_filter || t.lineage === next.lineage_filter))
+              .map((t) => t.subtype)
+          );
+          if (!validSubs.has(filters.subtype_filter)) {
+            next.subtype_filter = null;
+          }
+        }
+      }
+    }
+
+    if (key === "lineage_filter") {
+      // Reset subtype if no longer valid for new lineage
+      if (filters.subtype_filter) {
+        const validSubs = new Set(
+          tripleMapping
+            .filter((t) => (!next.disease_filter || t.disease === next.disease_filter) && (!value || t.lineage === value))
+            .map((t) => t.subtype)
         );
-        if (!validLineages.has(filters.lineage_filter)) {
-          next.lineage_filter = null;
+        if (!validSubs.has(filters.subtype_filter)) {
+          next.subtype_filter = null;
         }
       }
     }
@@ -122,6 +171,49 @@ export default function FilterPanel({ filters, onChange }) {
             ))}
           </select>
         </div>
+
+        {/* Subtype dropdown */}
+        <div className={styles.field}>
+          <label className={styles.label}>Subtype</label>
+          <select
+            className={styles.select}
+            value={filters.subtype_filter || ""}
+            onChange={(e) => set("subtype_filter", e.target.value || null)}
+          >
+            <option value="">All subtypes</option>
+            {subtypes.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Filter / Boost mode toggle */}
+        {(filters.disease_filter || filters.lineage_filter || filters.subtype_filter) && (
+          <div className={styles.field}>
+            <label className={styles.label}>Mode</label>
+            <div className={styles.modeToggle}>
+              <button
+                className={`${styles.modeBtn} ${filters.filter_mode === "filter" ? styles.mode_exclude : ""}`}
+                onClick={() => set("filter_mode", "filter")}
+              >
+                Filter
+              </button>
+              <button
+                className={`${styles.modeBtn} ${filters.filter_mode === "boost" ? styles.mode_include : ""}`}
+                onClick={() => set("filter_mode", "boost")}
+              >
+                Boost
+              </button>
+            </div>
+            <span className={styles.hint}>
+              {filters.filter_mode === "filter"
+                ? "Only show matching cell lines"
+                : "Prefer matching, keep all results"}
+            </span>
+          </div>
+        )}
 
         {/* ── ADVANCED FILTERS (collapsible) ── */}
         <button
