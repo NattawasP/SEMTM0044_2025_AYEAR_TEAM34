@@ -25,7 +25,7 @@ from app.database import query_df
 
 logger = logging.getLogger(__name__)
 
-N_GENES = 2000
+N_GENES = 1000
 W_EXPR = 0.7
 W_PROT = 0.3
 
@@ -41,50 +41,46 @@ def _scale(wide: pd.DataFrame) -> pd.DataFrame:
     wide = wide.fillna(wide.median())
     return pd.DataFrame(
         StandardScaler().fit_transform(wide), index=wide.index, columns=wide.columns
-    )
+    ).astype(np.float32)
 
 
 def _build_expression() -> pd.DataFrame:
-    # variance on log values, not raw tpm - raw variance is dominated by
-    # highly-expressed genes rather than genes that actually distinguish cell lines
-    top_genes = query_df(f"""
-        SELECT CAST(ensembl_id AS VARCHAR) AS ensembl_id
-        FROM (
-            SELECT ensembl_id, var_pop(v) AS variance
-            FROM (
-                SELECT ach_id, ensembl_id, median(log2_tpm_plus1) AS v
-                FROM fact_expression_depmap
-                GROUP BY ach_id, ensembl_id
-            )
-            GROUP BY ensembl_id
-        )
-        ORDER BY variance DESC
-        LIMIT {N_GENES}
-    """)["ensembl_id"].tolist()
+    # Use pandas directly to avoid DuckDB OOM on small instances.
+    # Read the parquet, median-aggregate per (ach_id, ensembl_id),
+    # pick top-variance genes, then pivot.
+    path = PARQUET.get("fact_expression_depmap")
+    if path is None or not path.exists():
+        return pd.DataFrame()
+    df = pd.read_parquet(path, columns=["ach_id", "ensembl_id", "log2_tpm_plus1"])
+    df["ach_id"] = df["ach_id"].astype(str)
+    df["ensembl_id"] = df["ensembl_id"].astype(str)
 
-    placeholders = ", ".join(["?"] * len(top_genes))
-    long = query_df(f"""
-        SELECT CAST(ach_id AS VARCHAR) AS ach_id,
-               CAST(ensembl_id AS VARCHAR) AS ensembl_id,
-               median(log2_tpm_plus1) AS v
-        FROM fact_expression_depmap
-        WHERE CAST(ensembl_id AS VARCHAR) IN ({placeholders})
-        GROUP BY ach_id, ensembl_id
-    """, top_genes)
+    # Median expression per (cell line, gene)
+    med = df.groupby(["ach_id", "ensembl_id"])["log2_tpm_plus1"].median()
+    del df  # free memory early
 
-    return _scale(long.pivot(index="ach_id", columns="ensembl_id", values="v"))
+    # Top variable genes by variance across cell lines
+    gene_var = med.groupby("ensembl_id").var().nlargest(N_GENES)
+    top_genes = gene_var.index.tolist()
+
+    # Filter to top genes and pivot
+    med = med.reset_index()
+    med = med[med["ensembl_id"].isin(set(top_genes))]
+    wide = med.pivot(index="ach_id", columns="ensembl_id", values="log2_tpm_plus1")
+    return _scale(wide)
 
 
 def _build_proteomics() -> pd.DataFrame:
-    long = query_df("""
-        SELECT CAST(ach_id AS VARCHAR) AS ach_id,
-               CAST(ensembl_id AS VARCHAR) AS ensembl_id,
-               median(protein_intensity) AS v
-        FROM fact_proteomics
-        WHERE protein_intensity IS NOT NULL
-        GROUP BY ach_id, ensembl_id
-    """)
-    return _scale(long.pivot(index="ach_id", columns="ensembl_id", values="v"))
+    path = PARQUET.get("fact_proteomics")
+    if path is None or not path.exists():
+        return pd.DataFrame()
+    df = pd.read_parquet(path, columns=["ach_id", "ensembl_id", "protein_intensity"])
+    df = df.dropna(subset=["protein_intensity"])
+    df["ach_id"] = df["ach_id"].astype(str)
+    df["ensembl_id"] = df["ensembl_id"].astype(str)
+    med = df.groupby(["ach_id", "ensembl_id"])["protein_intensity"].median().reset_index()
+    wide = med.pivot(index="ach_id", columns="ensembl_id", values="protein_intensity")
+    return _scale(wide)
 
 
 def _build_metabolomics() -> pd.DataFrame:

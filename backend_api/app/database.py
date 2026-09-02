@@ -30,6 +30,11 @@ def get_connection() -> duckdb.DuckDBPyConnection:
 
         _conn = duckdb.connect(database=":memory:")
 
+        # Tune for low-memory environments (e.g. small EC2)
+        _conn.execute("SET memory_limit='512MB'")
+        _conn.execute("SET threads=2")
+        _conn.execute("SET preserve_insertion_order=false")
+
         # Register each Parquet file as a view
         for view_name, parquet_path in PARQUET.items():
             if parquet_path.exists():
