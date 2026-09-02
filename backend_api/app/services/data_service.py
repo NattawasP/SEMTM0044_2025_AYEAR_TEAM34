@@ -514,3 +514,45 @@ def get_evidence_for_cell_line(
     }
 
     return result
+
+def get_full_dim() -> pd.DataFrame:
+    """Return full dim_cell_lines including Subtype for Q6 scoring."""
+    from app.database import query_df
+    return query_df(
+        """
+        SELECT CAST(ach_id AS VARCHAR) AS ach_id,
+            cell_line_name,
+            CAST(primary_disease AS VARCHAR) AS primary_disease,
+            CAST(lineage AS VARCHAR) AS lineage,
+            CAST(Subtype AS VARCHAR) AS Subtype,
+            CAST(growth_pattern AS VARCHAR) AS growth_pattern
+        FROM dim_cell_lines
+        """
+    )
+        
+def get_subtypes(disease: str | None = None) -> list[str]:
+    """Get distinct Subtype values, optionally filtered by disease."""
+    if disease:
+        rows = query(
+            """
+            SELECT DISTINCT CAST(Subtype AS VARCHAR) AS Subtype
+            FROM dim_cell_lines
+            WHERE CAST(primary_disease AS VARCHAR) = ?
+            AND Subtype IS NOT NULL
+            AND CAST(Subtype AS VARCHAR) != ''
+            ORDER BY Subtype
+            """,
+            [disease],
+        )
+    else:
+        rows = query(
+            """
+            SELECT DISTINCT CAST(Subtype AS VARCHAR) AS Subtype
+            FROM dim_cell_lines
+            WHERE Subtype IS NOT NULL
+            AND CAST(Subtype AS VARCHAR) != ''
+            ORDER BY Subtype
+            """
+        )
+    return [r["Subtype"] for r in rows if r["Subtype"]]
+

@@ -44,6 +44,10 @@ def rank_cell_lines(req: RankRequest):
         scoring_method=req.scoring_method,
         sources=req.sources,
         assay_type=req.assay_type,
+        target_disease=req.target_disease,
+        target_lineage=req.target_lineage,
+        target_subtype=req.target_subtype,
+        q6_boost_enabled=req.q6_boost_enabled,
     )
 
     return RankResponse(
@@ -66,6 +70,10 @@ def rank_cell_lines(req: RankRequest):
             "scoring_method": req.scoring_method,
             "sources": req.sources,
             "assay_type": req.assay_type,
+            "target_disease": req.target_disease,
+            "target_lineage": req.target_lineage,
+            "target_subtype": req.target_subtype,
+            "q6_boost_enabled": req.q6_boost_enabled,
         },
         total_results=len(results),
         results=results,

@@ -286,6 +286,10 @@ def run_ranking(
     scoring_method: str = "rrf",
     sources: list[str] | None = None,
     assay_type: str | None = None,
+    target_disease: str | None = None,       
+    target_lineage: str | None = None,       
+    target_subtype: str | None = None,       
+    q6_boost_enabled: bool = True,           
 ) -> list[dict]:
     """
     Execute the full ranking pipeline. Returns list of ranked cell line dicts.
@@ -427,6 +431,33 @@ def run_ranking(
     results.sort(key=lambda x: x["score"], reverse=True)
     for i, r in enumerate(results):
         r["rank"] = i + 1
+
+    # Q6 soft boost (Option 2) 
+    if q6_boost_enabled and (target_disease or target_lineage or target_subtype):
+        from app.services.q6_lineage_scorer import compute_q6_score
+        
+        dim_full = data_service.get_full_dim()   
+        q6 = compute_q6_score(
+            dim_full,
+            query_lineage=target_lineage,
+            query_disease=target_disease,
+            query_subtype=target_subtype
+        )
+        q6_map = q6.set_index("ach_id")[["q6_score", "match_level"]].to_dict("index")
+        
+        for r in results:
+            info = q6_map.get(r["ach_id"], {})
+            q6_score = info.get("q6_score", 0.0)
+            r["q6_score"] = q6_score
+            r["match_level"] = info.get("match_level", "none")
+            r["base_score"] = r["score"]
+            # Formula: final = base × (0.7 + 0.3 × q6)   (α = 0.3, softer penalty)
+            r["score"] = round(r["score"] * (0.7 + 0.3 * q6_score), 4)
+        
+        # Re-sort by boosted score
+        results.sort(key=lambda x: x["score"], reverse=True)
+        for i, r in enumerate(results):
+            r["rank"] = i + 1
 
     results = results[:top_n]
 

@@ -29,3 +29,9 @@ def disease_lineage_mapping():
     """Return all (disease, lineage) pairs for linked dropdown filtering."""
     pairs = data_service.get_disease_lineage_mapping()
     return {"pairs": pairs}
+
+@router.get("/subtypes")
+def list_subtypes(disease: str | None = None):
+    """Return subtypes for a given disease (or all if none)."""
+    values = data_service.get_subtypes(disease)
+    return FilterOptions(values=values, count=len(values))
