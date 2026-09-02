@@ -131,17 +131,39 @@ BUILDERS = {
 }
 
 
+def _load_precomputed(name: str) -> pd.DataFrame | None:
+    """Try to load a pre-computed scaled matrix from disk."""
+    from app.config import DATA_DIR
+    path = DATA_DIR / f"sim_{name}.parquet"
+    if path.exists():
+        logger.info("Loading pre-computed %s matrix from %s", name, path)
+        df = pd.read_parquet(path)
+        df.index = df.index.astype(str)
+        df.index.name = "ach_id"
+        return df
+    return None
+
+
 def get_layer(name: str) -> pd.DataFrame:
-    """Return a scaled feature matrix, building it on first use."""
+    """Return a scaled feature matrix. Loads pre-computed file if available,
+    otherwise builds from raw data (needs lots of RAM)."""
     if name in _cache:
         return _cache[name]
     with _lock:
         if name not in _cache:
-            logger.info("Building %s matrix (first call — this may take a minute)...", name)
             t0 = time.time()
-            _cache[name] = BUILDERS[name]()
-            logger.info("Built %s matrix: %d cell lines × %d features in %.1fs",
-                        name, _cache[name].shape[0], _cache[name].shape[1], time.time() - t0)
+            # Try pre-computed first (fast, low memory)
+            pre = _load_precomputed(name)
+            if pre is not None:
+                _cache[name] = pre
+                logger.info("Loaded %s matrix: %d cell lines × %d features in %.1fs",
+                            name, pre.shape[0], pre.shape[1], time.time() - t0)
+            else:
+                # Fall back to building from raw data (needs RAM)
+                logger.info("Building %s matrix from raw data (this may take a minute)...", name)
+                _cache[name] = BUILDERS[name]()
+                logger.info("Built %s matrix: %d cell lines × %d features in %.1fs",
+                            name, _cache[name].shape[0], _cache[name].shape[1], time.time() - t0)
     return _cache[name]
 
 
