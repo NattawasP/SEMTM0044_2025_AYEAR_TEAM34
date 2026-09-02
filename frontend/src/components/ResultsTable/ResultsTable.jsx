@@ -9,6 +9,7 @@ export default function ResultsTable({
   onRowClick,
   mutationMode = "ignore",
   fusionMode = "ignore",
+  assayType = null,
 }) {
   if (loading) {
     return (
@@ -30,6 +31,7 @@ export default function ResultsTable({
   // cell lines with mutations (Include). Ignore/Exclude keep the table clean.
   const showMutationColumn = mutationMode === "include";
   const showFusionColumn = fusionMode === "include";
+  const showAssayColumn = !!assayType;
 
   function rankBadgeClass(rank) {
     if (rank === 1) return styles.rank1;
@@ -152,6 +154,7 @@ export default function ResultsTable({
               <th>Scenario</th>
               {showMutationColumn && <th>Mutation</th>}
               {showFusionColumn && <th>Fusion</th>}
+              {showAssayColumn && <th>Assay</th>}
             </tr>
           </thead>
           <tbody>
@@ -207,6 +210,19 @@ export default function ResultsTable({
                   {showFusionColumn && (
                     <td style={{ fontSize: "12px", color: "#555" }}>
                       {fusText || <span style={{ color: "#bbb" }}>—</span>}
+                    </td>
+                  )}
+                  {showAssayColumn && (
+                    <td>
+                      {r.q7_status === "OK" ? (
+                        <span className={styles.assayOk}>OK</span>
+                      ) : r.q7_status === "WARN" ? (
+                        <span className={styles.assayWarn} title={r.q7_warning}>
+                          WARN
+                        </span>
+                      ) : (
+                        <span style={{ color: "#bbb" }}>—</span>
+                      )}
                     </td>
                   )}
                 </tr>

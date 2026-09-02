@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
-import { getCellLineEvidence } from "../../api";
+import { getCellLineEvidence, getSimilarCellLines } from "../../api";
 import styles from "./DetailPanel.module.css";
 
 export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "rrf", maxScore = 0, wRna = 0.7, wProtein = 0.3, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [similar, setSimilar] = useState(null);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarOpen, setSimilarOpen] = useState(false);
 
   useEffect(() => {
     if (!achId || genes.length === 0) return;
     setLoading(true);
+    setSimilar(null);
+    setSimilarOpen(false);
     getCellLineEvidence(achId, genes, wRna, wProtein)
       .then(setData)
       .catch((err) => {
@@ -17,6 +22,19 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
       })
       .finally(() => setLoading(false));
   }, [achId, genes, wRna, wProtein]);
+
+  function loadSimilar() {
+    if (similarLoading || similar) return;
+    setSimilarOpen(true);
+    setSimilarLoading(true);
+    getSimilarCellLines(achId, 5)
+      .then(setSimilar)
+      .catch((err) => {
+        console.error("Similar cell lines fetch error:", err);
+        setSimilar(null);
+      })
+      .finally(() => setSimilarLoading(false));
+  }
 
   if (!achId) return null;
 
@@ -343,6 +361,85 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                 </div>
               </div>
             )}
+
+            {/* ── Similar Alternatives ── */}
+            <div className={styles.sourceSection}>
+              <div
+                className={styles.similarHeader}
+                onClick={() => { if (!similarOpen) loadSimilar(); else setSimilarOpen(!similarOpen); }}
+                style={{ cursor: "pointer" }}
+              >
+                <h4 className={styles.sectionLabel} style={{ margin: 0 }}>
+                  {similarOpen ? "▾" : "▸"} Similar Alternatives
+                </h4>
+                <span className={styles.similarHint}>
+                  {similarOpen ? "" : "Click to find similar cell lines"}
+                </span>
+              </div>
+              {similarOpen && similarLoading ? (
+                <div className={styles.similarLoading}>Finding similar cell lines...</div>
+              ) : similarOpen && similar?.similar?.length > 0 ? (
+                <div className={styles.similarGrid}>
+                  {similar.similar.map((s) => {
+                    const simPct = (s.similarity * 100).toFixed(1);
+                    const simColor =
+                      s.similarity >= 0.8 ? "#2f9e6f"
+                      : s.similarity >= 0.5 ? "#f0b429"
+                      : "#e05a4d";
+                    return (
+                      <div key={s.ach_id} className={styles.similarCard}>
+                        <div className={styles.similarCardHeader}>
+                          <div className={styles.similarCardName}>
+                            {s.cell_line_name || s.ach_id}
+                            {s.is_derivative && (
+                              <span className={styles.derivBadge} title="Shares a parent cell line">
+                                Derivative
+                              </span>
+                            )}
+                          </div>
+                          <div className={styles.similarScore} style={{ background: simColor }}>
+                            {simPct}%
+                          </div>
+                        </div>
+                        <div className={styles.similarMeta}>
+                          {s.primary_disease && <span>{s.primary_disease}</span>}
+                          {s.lineage && <span> · {s.lineage}</span>}
+                        </div>
+                        <div className={styles.similarLayers}>
+                          {s.expression_similarity != null && (
+                            <span className={styles.layerTag}>
+                              Expr {(s.expression_similarity * 100).toFixed(0)}%
+                            </span>
+                          )}
+                          {s.protein_similarity != null && (
+                            <span className={styles.layerTag}>
+                              Prot {(s.protein_similarity * 100).toFixed(0)}%
+                            </span>
+                          )}
+                          {s.metabolomics_similarity != null && (
+                            <span className={styles.layerTag}>
+                              Metab {(s.metabolomics_similarity * 100).toFixed(0)}%
+                            </span>
+                          )}
+                          {s.mirna_similarity != null && (
+                            <span className={styles.layerTag}>
+                              miRNA {(s.mirna_similarity * 100).toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                        {s.scored_on && (
+                          <div className={styles.similarScoredOn}>
+                            Scored on: {s.scored_on.join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : similarOpen && similar ? (
+                <div className={styles.similarLoading}>No similar cell lines found</div>
+              ) : null}
+            </div>
 
             {/* ── Scoring method info ── */}
             <div className={styles.methodInfo}>

@@ -43,6 +43,7 @@ def rank_cell_lines(req: RankRequest):
         top_n=req.top_n,
         scoring_method=req.scoring_method,
         sources=req.sources,
+        assay_type=req.assay_type,
     )
 
     return RankResponse(
@@ -64,6 +65,7 @@ def rank_cell_lines(req: RankRequest):
             "top_n": req.top_n,
             "scoring_method": req.scoring_method,
             "sources": req.sources,
+            "assay_type": req.assay_type,
         },
         total_results=len(results),
         results=results,

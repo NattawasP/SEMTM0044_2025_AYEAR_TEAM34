@@ -285,6 +285,7 @@ def run_ranking(
     top_n: int = 20,
     scoring_method: str = "rrf",
     sources: list[str] | None = None,
+    assay_type: str | None = None,
 ) -> list[dict]:
     """
     Execute the full ranking pipeline. Returns list of ranked cell line dicts.
@@ -427,4 +428,18 @@ def run_ranking(
     for i, r in enumerate(results):
         r["rank"] = i + 1
 
-    return results[:top_n]
+    results = results[:top_n]
+
+    # Q7 assay compatibility warnings (does NOT change ranking order)
+    if assay_type and assay_type != "none":
+        from app.services.q7_warning_checker import check_q7_warnings
+
+        dim = pd.DataFrame(results)[["ach_id", "cell_line_name", "lineage", "growth_pattern"]]
+        q7 = check_q7_warnings(dim, assay_type)
+        q7_map = q7.set_index("ach_id")[["q7_status", "q7_warning"]].to_dict("index")
+        for r in results:
+            info = q7_map.get(r["ach_id"], {})
+            r["q7_status"] = info.get("q7_status", "OK")
+            r["q7_warning"] = info.get("q7_warning", "")
+
+    return results

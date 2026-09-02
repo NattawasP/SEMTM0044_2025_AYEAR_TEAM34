@@ -11,14 +11,19 @@ dimensions is too few for a stable cosine similarity.
 Matrices are expensive to build, so each is computed on first use and cached.
 """
 
+import logging
 import threading
+import time
 
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import cosine_similarity
 
+from app.config import PARQUET
 from app.database import query_df
+
+logger = logging.getLogger(__name__)
 
 N_GENES = 2000
 W_EXPR = 0.7
@@ -83,33 +88,41 @@ def _build_proteomics() -> pd.DataFrame:
 
 
 def _build_metabolomics() -> pd.DataFrame:
-    long = query_df("""
-        SELECT CAST(ach_id AS VARCHAR) AS ach_id,
-               CAST(metabolite AS VARCHAR) AS feature,
-               median(value) AS v
-        FROM fact_metabolomics
-        GROUP BY ach_id, metabolite
-    """)
-    return _scale(long.pivot(index="ach_id", columns="feature", values="v"))
+    # Wide format: rows = cell lines, cols = CCLE_ID + DepMap_ID + 225 metabolites
+    # Read directly with pandas to avoid DuckDB alias issues
+    path = PARQUET.get("fact_metabolomics")
+    if path is None or not path.exists():
+        return pd.DataFrame()
+    df = pd.read_parquet(path)
+    df = df.set_index("DepMap_ID").drop(columns=["CCLE_ID"], errors="ignore")
+    df.index.name = "ach_id"
+    return _scale(df)
 
 
 def _build_mirna() -> pd.DataFrame:
-    long = query_df("""
-        SELECT CAST(ach_id AS VARCHAR) AS ach_id,
-               CAST(mirna_id AS VARCHAR) AS feature,
-               median(value) AS v
-        FROM fact_mirna
-        GROUP BY ach_id, mirna_id
-    """)
-    return _scale(long.pivot(index="ach_id", columns="feature", values="v"))
+    # Rows = miRNAs (734), cols = ACH IDs (952) + a miRNA name column
+    # Need to set miRNA name column as index before transposing
+    path = PARQUET.get("fact_mirna")
+    if path is None or not path.exists():
+        return pd.DataFrame()
+    df = pd.read_parquet(path)
+    # Find the string column that holds miRNA names and use it as index
+    str_cols = df.select_dtypes(include="object").columns
+    if len(str_cols) > 0:
+        df = df.set_index(str_cols[0])
+    df = df.T  # Now rows = cell lines (ACH IDs), cols = miRNA names
+    df.index.name = "ach_id"
+    return _scale(df)
 
 
 def _build_signatures() -> pd.DataFrame:
-    df = query_df("""
-        SELECT CAST(ach_id AS VARCHAR) AS ach_id,
-               MSIScore, LoHFraction, WGD, CIN, Ploidy, Aneuploidy
-        FROM fact_signatures
-    """).set_index("ach_id")
+    # Wide format: rows = cell lines (index=ModelID), cols = 6 signature features
+    path = PARQUET.get("fact_signatures")
+    if path is None or not path.exists():
+        return pd.DataFrame()
+    df = pd.read_parquet(path)
+    # Index is already ModelID from parquet
+    df.index.name = "ach_id"
     return _scale(df)
 
 
@@ -128,7 +141,11 @@ def get_layer(name: str) -> pd.DataFrame:
         return _cache[name]
     with _lock:
         if name not in _cache:
+            logger.info("Building %s matrix (first call — this may take a minute)...", name)
+            t0 = time.time()
             _cache[name] = BUILDERS[name]()
+            logger.info("Built %s matrix: %d cell lines × %d features in %.1fs",
+                        name, _cache[name].shape[0], _cache[name].shape[1], time.time() - t0)
     return _cache[name]
 
 

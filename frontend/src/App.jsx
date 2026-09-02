@@ -19,6 +19,13 @@ const DEFAULT_FILTERS = {
   core_only: false,
   top_n: 20,
   sources: ["depmap", "hpa", "geo"],
+  assay_type: null,
+  msi_max: null,
+  cin_max: null,
+  exclude_metabolite: null,
+  metabolite_threshold: null,
+  exclude_mirna: null,
+  mirna_threshold: null,
 };
 
 export default function App() {
@@ -267,6 +274,7 @@ export default function App() {
             onRowClick={setDetailId}
             mutationMode={filters.mutation_mode}
             fusionMode={filters.fusion_mode}
+            assayType={filters.assay_type}
           />
         </main>
       </div>

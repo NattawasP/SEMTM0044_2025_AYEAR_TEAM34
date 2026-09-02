@@ -147,7 +147,8 @@ def get_fused_cell_lines(hugo: str) -> set[str]:
 # ── Non-gene-expression exclusion queries ─────────────────────
 
 def get_unstable_cell_lines(msi_max: float | None, cin_max: float | None) -> set[str]:
-    """Cell lines exceeding the given genomic instability thresholds."""
+    """Cell lines exceeding the given genomic instability thresholds.
+    signatures_clean.parquet: index=ModelID (ACH IDs), cols: MSIScore, CIN, etc."""
     clauses = []
     params = []
     if msi_max is not None:
@@ -161,7 +162,7 @@ def get_unstable_cell_lines(msi_max: float | None, cin_max: float | None) -> set
 
     rows = query(
         f"""
-        SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
+        SELECT DISTINCT CAST(ModelID AS VARCHAR) AS ach_id
         FROM fact_signatures
         WHERE {" OR ".join(clauses)}
         """,
@@ -171,29 +172,49 @@ def get_unstable_cell_lines(msi_max: float | None, cin_max: float | None) -> set
 
 
 def get_high_metabolite_cell_lines(metabolite: str, threshold: float) -> set[str]:
-    """Cell lines whose level of a metabolite exceeds the threshold."""
-    rows = query(
-        """
-        SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
-        FROM fact_metabolomics
-        WHERE CAST(metabolite AS VARCHAR) = ? AND value > ?
-        """,
-        [metabolite, threshold],
-    )
+    """Cell lines whose level of a metabolite exceeds the threshold.
+    metabolomics_clean.parquet is wide: cols = CCLE_ID, DepMap_ID, + 225 metabolites."""
+    import re
+    safe_col = re.sub(r"[^a-zA-Z0-9_ ()/-]", "", metabolite)
+    try:
+        rows = query(
+            f"""
+            SELECT DISTINCT CAST(DepMap_ID AS VARCHAR) AS ach_id
+            FROM fact_metabolomics
+            WHERE "{safe_col}" > ?
+            """,
+            [threshold],
+        )
+    except Exception:
+        return set()
     return {r["ach_id"] for r in rows}
 
 
 def get_high_mirna_cell_lines(mirna_id: str, threshold: float) -> set[str]:
-    """Cell lines whose expression of a miRNA exceeds the threshold."""
-    rows = query(
-        """
-        SELECT DISTINCT CAST(ach_id AS VARCHAR) AS ach_id
-        FROM fact_mirna
-        WHERE CAST(mirna_id AS VARCHAR) = ? AND value > ?
-        """,
-        [mirna_id, threshold],
-    )
-    return {r["ach_id"] for r in rows}
+    """Cell lines whose expression of a miRNA exceeds the threshold.
+    mirna_clean.parquet is transposed: rows = miRNAs, cols = ACH IDs.
+    Read with pandas since DuckDB can't easily query this layout."""
+    import pandas as pd
+    from app.config import PARQUET
+
+    path = PARQUET.get("fact_mirna")
+    if path is None or not path.exists():
+        return set()
+
+    df = pd.read_parquet(path)
+    # Find the string column holding miRNA names
+    str_cols = df.select_dtypes(include="object").columns
+    if len(str_cols) == 0:
+        return set()
+
+    mirna_col = str_cols[0]
+    row = df[df[mirna_col] == mirna_id]
+    if row.empty:
+        return set()
+
+    # Remaining columns are ACH IDs with expression values
+    values = row.drop(columns=[mirna_col]).iloc[0]
+    return set(values[values > threshold].index.astype(str))
 
 
 # ── Cell line metadata ────────────────────────────────────────

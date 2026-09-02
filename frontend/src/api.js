@@ -59,6 +59,14 @@ export function getCellLineEvidence(achId, genes, wRna = 0.7, wProtein = 0.3) {
   );
 }
 
+/* ── Similar cell lines ───────────────────────────────────── */
+
+export function getSimilarCellLines(achId, topN = 5) {
+  return request(
+    `${BASE}/celllines/${encodeURIComponent(achId)}/similar?top_n=${topN}`
+  );
+}
+
 /* ── Compare ───────────────────────────────────────────────── */
 
 export function compareCellLines(achIds, gene) {

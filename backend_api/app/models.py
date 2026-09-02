@@ -33,6 +33,10 @@ class RankRequest(BaseModel):
         default=["depmap", "hpa", "geo"],
         description="RNA expression sources to include in ranking: depmap, hpa, geo. Protein is always scored separately (see w_protein)."
     )
+    assay_type: str | None = Field(
+        None,
+        description="Planned assay type for compatibility warnings: adherent_screen, 3d_spheroid, suspension_screen, flexible"
+    )
 
 
 class CompareRequest(BaseModel):
@@ -64,6 +68,8 @@ class RankedCellLine(BaseModel):
     is_core: bool = False
     mutations: list[dict] | None = None
     fusions: list[dict] | None = None
+    q7_status: str | None = None
+    q7_warning: str | None = None
 
 
 class RankResponse(BaseModel):
