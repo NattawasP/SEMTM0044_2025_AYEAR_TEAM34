@@ -25,11 +25,9 @@ jobs:
             git pull origin mew/ranking-v2
 
             # Backend: install any new dependencies
-            cd backend_api
-            source venv/bin/activate
+            source backend_api/venv/bin/activate
             pip install -r requirements.txt --quiet
             deactivate
-            cd ..
 
             # Frontend: install deps + rebuild
             cd frontend
