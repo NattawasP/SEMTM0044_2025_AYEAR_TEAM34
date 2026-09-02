@@ -91,6 +91,14 @@ export function getDiseaseLineageMapping() {
   return request(`${BASE}/filters/disease-lineage-mapping`);
 }
 
+export function getSubtypes() {
+  return request(`${BASE}/filters/subtypes`);
+}
+
+export function getDiseaseLineageSubtypeMapping() {
+  return request(`${BASE}/filters/disease-lineage-subtype-mapping`);
+}
+
 /* ── Chat agent ───────────────────────────────────────────── */
 
 export function chatWithAgent(message, history = null) {

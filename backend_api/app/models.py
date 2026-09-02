@@ -26,6 +26,7 @@ class RankRequest(BaseModel):
     mirna_threshold: float | None = Field(None, description="Exclude above this level; required if exclude_mirna is set")
     disease_filter: str | None = Field(None, description="Filter by primary_disease")
     lineage_filter: str | None = Field(None, description="Filter by lineage")
+    subtype_filter: str | None = Field(None, description="Filter by Subtype")
     core_only: bool = Field(False, description="Only cell lines with data in all 3 expression sources")
     top_n: int = Field(20, ge=1, le=200, description="Number of results to return")
     scoring_method: str = Field("rrf", pattern="^(rrf|zscore|percentile)$", description="Scoring method: rrf (ensemble), zscore only, percentile only")

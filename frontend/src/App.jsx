@@ -16,6 +16,7 @@ const DEFAULT_FILTERS = {
   fusion_mode: "ignore",
   disease_filter: null,
   lineage_filter: null,
+  subtype_filter: null,
   core_only: false,
   top_n: 20,
   sources: ["depmap", "hpa", "geo"],

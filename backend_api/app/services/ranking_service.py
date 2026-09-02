@@ -281,6 +281,7 @@ def run_ranking(
     mirna_threshold: float | None = None,
     disease_filter: str | None = None,
     lineage_filter: str | None = None,
+    subtype_filter: str | None = None,
     core_only: bool = False,
     top_n: int = 20,
     scoring_method: str = "rrf",
@@ -378,6 +379,10 @@ def run_ranking(
 
         # Lineage filter
         if lineage_filter and (cl.get("lineage") or "").lower() != lineage_filter.lower():
+            continue
+
+        # Subtype filter
+        if subtype_filter and (cl.get("subtype") or "").lower() != subtype_filter.lower():
             continue
 
         # Core only: require data in all 3 expression sources (for first gene)
