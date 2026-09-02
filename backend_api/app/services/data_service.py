@@ -363,6 +363,23 @@ def get_disease_lineage_subtype_mapping() -> list[dict]:
             for r in rows if r["disease"] and r["lineage"] and r["subtype"]]
 
 
+# ── Full dim table (for Q6 scoring) ────────────────────────────
+
+def get_full_dim() -> pd.DataFrame:
+    """Return full dim_cell_lines including Subtype for Q6 scoring."""
+    return query_df(
+        """
+        SELECT CAST(ach_id AS VARCHAR) AS ach_id,
+            cell_line_name,
+            CAST(primary_disease AS VARCHAR) AS primary_disease,
+            CAST(lineage AS VARCHAR) AS lineage,
+            CAST("Subtype" AS VARCHAR) AS Subtype,
+            CAST(growth_pattern AS VARCHAR) AS growth_pattern
+        FROM dim_cell_lines
+        """
+    )
+
+
 # ── Evidence breakdown (per-source scoring) ──────────────────
 
 EXPRESSION_SOURCES = [

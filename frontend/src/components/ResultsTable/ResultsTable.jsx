@@ -10,6 +10,7 @@ export default function ResultsTable({
   mutationMode = "ignore",
   fusionMode = "ignore",
   assayType = null,
+  boostMode = false,
 }) {
   if (loading) {
     return (
@@ -32,6 +33,23 @@ export default function ResultsTable({
   const showMutationColumn = mutationMode === "include";
   const showFusionColumn = fusionMode === "include";
   const showAssayColumn = !!assayType;
+  const showMatchColumn = boostMode;
+
+  // Check if any result has a non-"none" match in boost mode
+  const hasAnyMatch = boostMode && results.some((r) => r.match_level && r.match_level !== "none");
+
+  function matchBadge(matchLevel) {
+    switch (matchLevel) {
+      case "exact_subtype":
+        return <span className={styles.matchExact}>Subtype ✓</span>;
+      case "same_disease":
+        return <span className={styles.matchDisease}>Disease</span>;
+      case "same_lineage":
+        return <span className={styles.matchLineage}>Lineage</span>;
+      default:
+        return <span className={styles.matchNone}>—</span>;
+    }
+  }
 
   function rankBadgeClass(rank) {
     if (rank === 1) return styles.rank1;
@@ -135,6 +153,13 @@ export default function ResultsTable({
         </div>
       )}
 
+      {/* No-match banner for boost mode */}
+      {boostMode && !hasAnyMatch && (
+        <div className={styles.noMatchBanner}>
+          No cells matched your target tissue in top results
+        </div>
+      )}
+
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -151,6 +176,7 @@ export default function ResultsTable({
               <th>Cell Line</th>
               <th>Disease</th>
               <th>Score</th>
+              {showMatchColumn && <th>Match</th>}
               <th>Scenario</th>
               {showMutationColumn && <th>Mutation</th>}
               {showFusionColumn && <th>Fusion</th>}
@@ -194,9 +220,17 @@ export default function ResultsTable({
                           style={{ width: `${ratio * 100}%` }}
                         />
                       </div>
-                      <span className={styles.scoreVal}>{r.score.toFixed(4)}</span>
+                      <span
+                        className={styles.scoreVal}
+                        title={r.base_score != null ? `Boosted from ${r.base_score.toFixed(4)}` : ""}
+                      >
+                        {r.score.toFixed(4)}
+                      </span>
                     </div>
                   </td>
+                  {showMatchColumn && (
+                    <td>{matchBadge(r.match_level)}</td>
+                  )}
                   <td>
                     <span className={`${styles.scenTag} ${scenarioClass(r.scenario)}`}>
                       {r.scenario}

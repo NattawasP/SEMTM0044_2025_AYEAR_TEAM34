@@ -294,6 +294,58 @@
   cursor: help;
 }
 
+/* Q6 Match badges */
+.matchExact {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #d4edda;
+  color: #155724;
+}
+
+.matchDisease {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #e8f4e8;
+  color: #2d6a4f;
+}
+
+.matchLineage {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #fef3cd;
+  color: #856404;
+}
+
+.matchNone {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #e9ecef;
+  color: #999;
+}
+
+/* No-match banner */
+.noMatchBanner {
+  padding: 10px 16px;
+  background: #fff3cd;
+  color: #856404;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 1px solid #ffeeba;
+  text-align: center;
+}
+
 /* Loading */
 .loading {
   display: flex;

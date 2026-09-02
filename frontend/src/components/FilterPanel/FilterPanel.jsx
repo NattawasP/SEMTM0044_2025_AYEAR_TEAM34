@@ -189,6 +189,32 @@ export default function FilterPanel({ filters, onChange }) {
           </select>
         </div>
 
+        {/* Filter / Boost mode toggle */}
+        {(filters.disease_filter || filters.lineage_filter || filters.subtype_filter) && (
+          <div className={styles.field}>
+            <label className={styles.label}>Mode</label>
+            <div className={styles.modeToggle}>
+              <button
+                className={`${styles.modeBtn} ${filters.filter_mode === "filter" ? styles.mode_exclude : ""}`}
+                onClick={() => set("filter_mode", "filter")}
+              >
+                Filter
+              </button>
+              <button
+                className={`${styles.modeBtn} ${filters.filter_mode === "boost" ? styles.mode_include : ""}`}
+                onClick={() => set("filter_mode", "boost")}
+              >
+                Boost
+              </button>
+            </div>
+            <span className={styles.hint}>
+              {filters.filter_mode === "filter"
+                ? "Only show matching cell lines"
+                : "Prefer matching, keep all results"}
+            </span>
+          </div>
+        )}
+
         {/* ── ADVANCED FILTERS (collapsible) ── */}
         <button
           className={styles.advancedToggle}
