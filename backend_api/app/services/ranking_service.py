@@ -432,8 +432,13 @@ def run_ranking(
             "fusions": fusions,
         })
 
+    # Determine sort direction for post-filter re-ranking.
+    # For single gene with "low" direction, lower score = better → sort ascending.
+    # For multi-gene, direction is already baked into RRF ranks → sort descending.
+    _sort_descending = not (len(genes) == 1 and genes[0]["direction"] == "low")
+
     # Re-rank after filters
-    results.sort(key=lambda x: x["score"], reverse=True)
+    results.sort(key=lambda x: x["score"], reverse=_sort_descending)
     for i, r in enumerate(results):
         r["rank"] = i + 1
 
@@ -456,11 +461,18 @@ def run_ranking(
             r["q6_score"] = q6_score
             r["match_level"] = info.get("match_level", "none")
             r["base_score"] = r["score"]
-            # Formula: final = base × (0.7 + 0.3 × q6)   (α = 0.3)
-            r["score"] = round(r["score"] * (0.7 + 0.3 * q6_score), 4)
+            if _sort_descending:
+                # "high" direction: reward matching → higher score = better
+                # Formula: final = base × (0.7 + 0.3 × q6)   (α = 0.3)
+                r["score"] = round(r["score"] * (0.7 + 0.3 * q6_score), 4)
+            else:
+                # "low" direction: penalise non-matching → inflate their score
+                # Matching (q6=1) → score × 1.0 (unchanged, stays near top)
+                # No match (q6=0) → score × 1.3 (pushed down in ascending sort)
+                r["score"] = round(r["score"] * (1.0 + 0.3 * (1.0 - q6_score)), 4)
 
-        # Re-sort by boosted score
-        results.sort(key=lambda x: x["score"], reverse=True)
+        # Re-sort by boosted score (respecting direction)
+        results.sort(key=lambda x: x["score"], reverse=_sort_descending)
         for i, r in enumerate(results):
             r["rank"] = i + 1
 

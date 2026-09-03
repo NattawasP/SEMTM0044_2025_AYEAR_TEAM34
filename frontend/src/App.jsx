@@ -305,6 +305,8 @@ export default function App() {
           maxScore={maxScore}
           wRna={filters.w_rna}
           wProtein={filters.w_protein}
+          mutationMode={filters.mutation_mode}
+          fusionMode={filters.fusion_mode}
           onClose={() => setDetailId(null)}
         />
       )}
