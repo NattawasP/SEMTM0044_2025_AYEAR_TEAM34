@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getCellLineEvidence, getSimilarCellLines } from "../../api";
 import styles from "./DetailPanel.module.css";
 
-export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "rrf", maxScore = 0, wRna = 0.7, wProtein = 0.3, onClose }) {
+export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "rrf", maxScore = 0, wRna = 0.7, wProtein = 0.3, mutationMode = "ignore", fusionMode = "ignore", onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [similar, setSimilar] = useState(null);
@@ -266,8 +266,8 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
               );
             })}
 
-            {/* ── Mutation detail ── */}
-            {data.mutations && data.mutations.length > 0 && (
+            {/* ── Mutation detail (only when mutation filter is active) ── */}
+            {mutationMode === "include" && data.mutations && data.mutations.length > 0 && (
               <div className={styles.sourceSection}>
                 <h4 className={styles.sectionLabel}>
                   Mutations in {genes.map((g) => g.hugo).join(", ")}
@@ -329,8 +329,8 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
               </div>
             )}
 
-            {/* ── Fusions ── */}
-            {data.fusions && data.fusions.length > 0 && (
+            {/* ── Fusions (only when fusion filter is active) ── */}
+            {fusionMode === "include" && data.fusions && data.fusions.length > 0 && (
               <div className={styles.sourceSection}>
                 <h4 className={styles.sectionLabel}>
                   Fusions ({data.fusions.length})

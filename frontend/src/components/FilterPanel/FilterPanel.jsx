@@ -90,6 +90,8 @@ export default function FilterPanel({ filters, onChange }) {
       if (value === null) {
         next.lineage_filter = null;
         next.subtype_filter = null;
+        // Reset boost mode when all tissue filters are cleared
+        next.filter_mode = "filter";
       } else {
         // Reset lineage if no longer valid for new disease
         if (filters.lineage_filter) {
@@ -126,6 +128,11 @@ export default function FilterPanel({ filters, onChange }) {
           next.subtype_filter = null;
         }
       }
+    }
+
+    // Reset boost mode when all tissue filters are cleared
+    if (!next.disease_filter && !next.lineage_filter && !next.subtype_filter) {
+      next.filter_mode = "filter";
     }
 
     onChange(next);
