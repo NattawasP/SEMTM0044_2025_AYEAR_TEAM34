@@ -51,9 +51,14 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
     : score >= 0.4 ? "#f0b429"
     : "#e05a4d";
 
-  // Per-source combined scores (w_rna*RNA_source + w_protein*Protein), same scale
-  // as overall score. Keyed by display name: { DepMap: 0.89, HPA: 0.85, GEO: 0.82 }
-  const sourceScores = data?.source_scores || {};
+  // Per-source combined scores. For single gene: { DepMap: 0.89, HPA: 0.85 }
+  // For multi-gene: { EGFR: { DepMap: 0.89 }, SEC61G: { DepMap: 0.92 } }
+  const rawSourceScores = data?.source_scores || {};
+  // Detect if nested (multi-gene) or flat (single-gene)
+  const isNestedScores = genes.length > 1 && typeof Object.values(rawSourceScores)[0] === "object";
+
+  // Per-gene combined scores for multi-gene searches: { EGFR: 0.98, SEC61G: 0.95 }
+  const perGeneScores = data?.per_gene_scores || {};
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -109,6 +114,11 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                         {dirLabel}
                       </span>
                     </div>
+                    {perGeneScores[g.hugo] != null && (
+                      <div className={styles.geneCardScore}>
+                        Score: <strong>{perGeneScores[g.hugo].toFixed(4)}</strong>
+                      </div>
+                    )}
                     {gd.expression_rank == null && (
                       <div className={styles.geneCardRank}>No expression data</div>
                     )}
@@ -174,7 +184,9 @@ export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "
                   </h4>
                   <div className={styles.sourceGrid}>
                     {gd.sources.map((src) => {
-                      const combined = sourceScores[src.source];
+                      const combined = isNestedScores
+                        ? rawSourceScores[g.hugo]?.[src.source]
+                        : rawSourceScores[src.source];
                       return (
                         <div key={src.source} className={styles.sourceCard}>
                           <h5 className={styles.sourceTitle}>{src.source}</h5>

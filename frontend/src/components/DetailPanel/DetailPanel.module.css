@@ -169,6 +169,17 @@
   color: #c0392b;
 }
 
+.geneCardScore {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.geneCardScore strong {
+  font-size: 16px;
+  color: #2d6a4f;
+}
+
 .geneCardRank {
   font-size: 16px;
   font-weight: 700;

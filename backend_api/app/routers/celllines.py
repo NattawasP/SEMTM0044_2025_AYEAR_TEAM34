@@ -22,58 +22,59 @@ def _per_source_scores(
     w_protein: float,
 ) -> dict:
     """
-    Compute a per-source combined score for the clicked cell line.
+    Compute per-gene, per-source combined scores for the clicked cell line.
 
-    For each RNA source (DepMap / HPA / GEO) we run the SAME ranking pipeline
-    used for the overall score, but with only that one RNA source enabled
-    (protein always included). Because it reuses run_ranking(), the resulting
-    score is on the same 0-1 scale as the overall score shown at the top of
-    the panel. Uses the same RNA/Protein weights the user selected.
+    For each gene × RNA source combination, runs ranking with just that one
+    gene and one source (+ protein). This produces scores on the same 0-1
+    scale as the single-gene overall score.
 
-    Only returns a score for sources the cell line actually has RNA data in,
-    so a source with no data (e.g. no GEO) is omitted rather than showing a
-    protein-only value.
+    Returns nested dict:
+      { "EGFR": { "DepMap": 0.89, "HPA": 0.85 }, "SEC61G": { "DepMap": 0.92 } }
 
-    Returns { "DepMap": 0.89, "HPA": 0.85 } (GEO omitted if no data).
+    For single-gene searches, also returns a flat dict for backward compat:
+      { "DepMap": 0.89, "HPA": 0.85 }
     """
-    # Which RNA sources does this cell line actually have data in?
-    have_sources = set()
-    for display_name, src_key in _RNA_SOURCES:
-        table = {
-            "depmap": "fact_expression_depmap",
-            "hpa": "fact_expression_hpa",
-            "geo": "fact_expression_geo",
-        }[src_key]
-        ensg = gene_targets[0]["ensembl_id"]
-        df = data_service.get_expression_for_gene(ensg, table)
-        if len(df) > 0 and (df["ach_id"] == ach_id).any():
-            have_sources.add(src_key)
+    result: dict[str, dict[str, float]] = {}
 
-    result: dict[str, float] = {}
+    for gt in gene_targets:
+        ensg = gt["ensembl_id"]
+        hugo = gt["hugo"]
+        gene_result: dict[str, float] = {}
 
-    for display_name, src_key in _RNA_SOURCES:
-        # Skip sources this cell line has no RNA data in
-        if src_key not in have_sources:
-            continue
+        for display_name, src_key in _RNA_SOURCES:
+            table = {
+                "depmap": "fact_expression_depmap",
+                "hpa": "fact_expression_hpa",
+                "geo": "fact_expression_geo",
+            }[src_key]
+            df = data_service.get_expression_for_gene(ensg, table)
+            if len(df) == 0 or not (df["ach_id"] == ach_id).any():
+                continue
 
-        try:
-            ranked = ranking_service.run_ranking(
-                genes=gene_targets,
-                w_rna=w_rna,
-                w_protein=w_protein,
-                mutation_mode="ignore",
-                fusion_mode="ignore",
-                top_n=100000,                 # no cutoff: we need the clicked cell line
-                scoring_method="rrf",
-                sources=[src_key, "protein"], # this one RNA source + protein only
-            )
-        except Exception:
-            continue
+            try:
+                ranked = ranking_service.run_ranking(
+                    genes=[gt],
+                    w_rna=w_rna,
+                    w_protein=w_protein,
+                    mutation_mode="ignore",
+                    fusion_mode="ignore",
+                    top_n=100000,
+                    scoring_method="rrf",
+                    sources=[src_key, "protein"],
+                )
+            except Exception:
+                continue
 
-        for row in ranked:
-            if row["ach_id"] == ach_id:
-                result[display_name] = row["score"]
-                break
+            for row in ranked:
+                if row["ach_id"] == ach_id:
+                    gene_result[display_name] = row["score"]
+                    break
+
+        result[hugo] = gene_result
+
+    # Single-gene: return flat dict for backward compatibility
+    if len(gene_targets) == 1:
+        return result.get(gene_targets[0]["hugo"], {})
 
     return result
 
@@ -119,6 +120,29 @@ def get_evidence(
     # Per-source combined scores (same scale as the overall score), using the
     # user's selected RNA/Protein weights.
     evidence["source_scores"] = _per_source_scores(ach_id, gene_targets, w_rna, w_protein)
+
+    # Per-gene combined scores: run ranking for each gene individually
+    # so the detail panel can show how this cell line scored per gene.
+    if len(gene_targets) > 1:
+        per_gene_scores = {}
+        for gt in gene_targets:
+            try:
+                ranked = ranking_service.run_ranking(
+                    genes=[gt],
+                    w_rna=w_rna,
+                    w_protein=w_protein,
+                    mutation_mode="ignore",
+                    fusion_mode="ignore",
+                    top_n=100000,
+                    scoring_method="rrf",
+                )
+            except Exception:
+                continue
+            for row in ranked:
+                if row["ach_id"] == ach_id:
+                    per_gene_scores[gt["hugo"]] = round(row["score"], 4)
+                    break
+        evidence["per_gene_scores"] = per_gene_scores
 
     return {**cl, **evidence}
 

@@ -210,6 +210,16 @@ export default function ResultsTable({
                   <td>
                     <div className={styles.cellName}>{r.cell_line_name || r.ach_id}</div>
                     <div className={styles.achId}>{r.ach_id}</div>
+                    {r.per_gene_rank && (
+                      <div className={styles.perGeneRanks}>
+                        {Object.entries(r.per_gene_rank).map(([hugo, rank], i) => (
+                          <span key={hugo} className={styles.geneRankTag}>
+                            {i > 0 && " · "}
+                            {hugo} <strong>#{rank}</strong>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className={styles.disease}>{r.primary_disease || "—"}</td>
                   <td>

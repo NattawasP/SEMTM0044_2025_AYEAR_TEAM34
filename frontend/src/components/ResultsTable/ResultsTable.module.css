@@ -180,6 +180,21 @@
   color: #999;
 }
 
+.perGeneRanks {
+  font-size: 10px;
+  color: #777;
+  margin-top: 2px;
+}
+
+.geneRankTag {
+  color: #777;
+}
+
+.geneRankTag strong {
+  color: #2d6a4f;
+  font-weight: 600;
+}
+
 .disease {
   font-size: 11px;
   color: #888;

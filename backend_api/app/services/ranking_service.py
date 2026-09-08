@@ -342,6 +342,11 @@ def run_ranking(
         # Multi-gene fusion keeps raw-sum RRF (a cell line strong across MORE
         # genes should rank higher — that is the intended behaviour here).
         multi_rrf = _rrf(gene_ranks, average=False)
+        # Normalise by dividing by the theoretical maximum RRF score.
+        # Best possible = each gene at rank 1 → n_genes × 1/(k+1).
+        # A cell line ranked #1 for ALL genes → 1.0; worse ranks → < 1.0.
+        theoretical_max = len(genes) / (RRF_K + 1)
+        multi_rrf = multi_rrf / theoretical_max
 
         rows = []
         for ach in multi_rrf.index:
@@ -418,6 +423,16 @@ def run_ranking(
             fusions = all_fusions if all_fusions else None
 
         score_col = "final_score" if "final_score" in row.index else "combined_score"
+
+        # Per-gene ranks for multi-gene searches
+        per_gene_rank = None
+        if len(genes) > 1:
+            per_gene_rank = {}
+            for gene in genes:
+                gr = gene_ranks.get(gene["hugo"])
+                if gr is not None and row["ach_id"] in gr.index:
+                    per_gene_rank[gene["hugo"]] = int(gr[row["ach_id"]])
+
         results.append({
             "ach_id": row["ach_id"],
             "cell_line_name": cl.get("cell_line_name"),
@@ -430,6 +445,7 @@ def run_ranking(
             "is_core": is_core,
             "mutations": mutations,
             "fusions": fusions,
+            "per_gene_rank": per_gene_rank,
         })
 
     # Determine sort direction for post-filter re-ranking.
