@@ -76,6 +76,7 @@ class RankedCellLine(BaseModel):
     q6_score: float | None = None
     match_level: str | None = None
     base_score: float | None = None
+    per_gene_rank: dict[str, int] | None = None
     q7_status: str | None = None
     q7_warning: str | None = None
 
