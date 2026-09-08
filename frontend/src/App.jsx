@@ -5,6 +5,7 @@ import ResultsTable from "./components/ResultsTable/ResultsTable.jsx";
 import DetailPanel from "./components/DetailPanel/DetailPanel.jsx";
 import CompareView from "./components/CompareView/CompareView.jsx";
 import ChatWidget from "./components/ChatWidget/ChatWidget.jsx";
+import DocsModal from "./components/DocsModal/DocsModal.jsx";
 import { rankCellLines } from "./api";
 import styles from "./App.module.css";
 
@@ -50,6 +51,7 @@ export default function App() {
   const [selected, setSelected] = useState([]);
   const [detailId, setDetailId] = useState(null);
   const [showCompare, setShowCompare] = useState(false);
+  const [docsTab, setDocsTab] = useState(null); // null = closed, "docs" | "sources" | "methods" | "about"
 
   /* Gene management */
   const addGene = useCallback((gene) => {
@@ -174,13 +176,13 @@ export default function App() {
           <div className={styles.logo}>
             Cell<span className={styles.logoAccent}>Line</span>Finder
           </div>
-          <span className={styles.headerTag}>v2.0 · Bristol × AstraZeneca</span>
+          <span className={styles.headerTag}>v2.1 · Bristol × AstraZeneca</span>
         </div>
         <div className={styles.headerRight}>
-          <a className={styles.headerLink} href="#">Documentation</a>
-          <a className={styles.headerLink} href="#">Data Sources</a>
-          <a className={styles.headerLink} href="#">Methods</a>
-          <a className={styles.headerLink} href="#">About</a>
+          <button className={styles.headerLink} onClick={() => setDocsTab("docs")}>Documentation</button>
+          <button className={styles.headerLink} onClick={() => setDocsTab("sources")}>Data Sources</button>
+          <button className={styles.headerLink} onClick={() => setDocsTab("methods")}>Methods</button>
+          <button className={styles.headerLink} onClick={() => setDocsTab("about")}>About</button>
         </div>
       </header>
 
@@ -318,6 +320,11 @@ export default function App() {
           genes={genes}
           onClose={() => setShowCompare(false)}
         />
+      )}
+
+      {/* Docs modal */}
+      {docsTab && (
+        <DocsModal initialTab={docsTab} onClose={() => setDocsTab(null)} />
       )}
 
       {/* Chat widget */}
