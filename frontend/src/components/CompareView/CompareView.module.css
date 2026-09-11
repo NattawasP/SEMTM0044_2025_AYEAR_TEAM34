@@ -1,0 +1,181 @@
+/* ── CompareView (modal overlay) ──────────────────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: var(--clr-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 90vw;
+  max-width: 1000px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-lg);
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--clr-text-muted);
+  padding: 0 var(--sp-xs);
+}
+
+.closeBtn:hover {
+  color: var(--clr-text);
+}
+
+/* Gene tabs */
+.geneTabs {
+  display: flex;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.geneTab {
+  padding: var(--sp-sm) var(--sp-lg);
+  border: none;
+  background: none;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--clr-text-muted);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.geneTab:hover {
+  color: var(--clr-text);
+}
+
+.geneTabActive {
+  color: var(--clr-primary);
+  border-bottom-color: var(--clr-primary);
+}
+
+/* Content */
+.content {
+  padding: var(--sp-lg);
+  overflow-y: auto;
+}
+
+.loading {
+  padding: var(--sp-xl);
+  text-align: center;
+  color: var(--clr-text-muted);
+}
+
+/* Table */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--sp-sm) var(--sp-md);
+  text-align: center;
+  border-bottom: 1px solid var(--clr-border);
+  font-size: var(--fs-sm);
+}
+
+.table th {
+  background: var(--clr-bg);
+  font-weight: 600;
+}
+
+.metricCol {
+  text-align: left !important;
+  width: 140px;
+}
+
+.metricLabel {
+  text-align: left !important;
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+}
+
+.clName {
+  font-weight: 700;
+}
+
+.clId {
+  font-size: var(--fs-xs);
+  color: var(--clr-text-muted);
+}
+
+.bestVal {
+  background: var(--clr-success-light);
+  color: var(--clr-success);
+  font-weight: 700;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .modal {
+    width: 95vw;
+    max-height: 90vh;
+  }
+
+  .content {
+    padding: var(--sp-md);
+  }
+
+  .table th,
+  .table td {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .metricCol {
+    width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .header {
+    padding: var(--sp-md);
+  }
+}

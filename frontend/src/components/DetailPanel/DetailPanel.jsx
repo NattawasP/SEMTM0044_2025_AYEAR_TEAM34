@@ -1,0 +1,501 @@
+import { useState, useEffect } from "react";
+import { getCellLineEvidence, getSimilarCellLines } from "../../api";
+import styles from "./DetailPanel.module.css";
+
+export default function DetailPanel({ achId, genes, resultRow, scoringMethod = "rrf", maxScore = 0, wRna = 0.7, wProtein = 0.3, mutationMode = "ignore", fusionMode = "ignore", onClose }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [similar, setSimilar] = useState(null);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarOpen, setSimilarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!achId || genes.length === 0) return;
+    setLoading(true);
+    setSimilar(null);
+    setSimilarOpen(false);
+    getCellLineEvidence(achId, genes, wRna, wProtein)
+      .then(setData)
+      .catch((err) => {
+        console.error("Evidence fetch error:", err);
+        setData(null);
+      })
+      .finally(() => setLoading(false));
+  }, [achId, genes, wRna, wProtein]);
+
+  function loadSimilar() {
+    if (similarLoading || similar) return;
+    setSimilarOpen(true);
+    setSimilarLoading(true);
+    getSimilarCellLines(achId, 5)
+      .then(setSimilar)
+      .catch((err) => {
+        console.error("Similar cell lines fetch error:", err);
+        setSimilar(null);
+      })
+      .finally(() => setSimilarLoading(false));
+  }
+
+  if (!achId) return null;
+
+  const score = resultRow?.score;
+  const confidence = resultRow?.confidence;
+  const scenario = resultRow?.scenario;
+
+  // Colour the score using RAW score value (same thresholds as the results table).
+  // Raw score gives a colour that reflects absolute quality, so it doesn't
+  // mislead when the top result in a filtered list happens to have a low score.
+  const scoreColor =
+    score == null ? "#e05a4d"
+    : score >= 0.7 ? "#2f9e6f"
+    : score >= 0.4 ? "#f0b429"
+    : "#e05a4d";
+
+  // Per-source combined scores. For single gene: { DepMap: 0.89, HPA: 0.85 }
+  // For multi-gene: { EGFR: { DepMap: 0.89 }, SEC61G: { DepMap: 0.92 } }
+  const rawSourceScores = data?.source_scores || {};
+  // Detect if nested (multi-gene) or flat (single-gene)
+  const isNestedScores = genes.length > 1 && typeof Object.values(rawSourceScores)[0] === "object";
+
+  // Per-gene combined scores for multi-gene searches: { EGFR: 0.98, SEC61G: 0.95 }
+  const perGeneScores = data?.per_gene_scores || {};
+
+  return (
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
+        {/* ── Header ── */}
+        <div className={styles.header}>
+          <div className={styles.headerInfo}>
+            <h2 className={styles.title}>
+              {data?.cell_line_name || resultRow?.cell_line_name || achId}
+              <span className={styles.subtitle}>
+                {" — Multi-Omics Evidence Breakdown"}
+              </span>
+            </h2>
+            <span className={styles.achMeta}>
+              {achId}
+              {data?.primary_disease && ` · ${data.primary_disease}`}
+              {data?.lineage && ` · ${data.lineage}`}
+              {data?.sex && ` · ${data.sex}`}
+              {data?.growth_pattern && ` · ${data.growth_pattern}`}
+            </span>
+          </div>
+          <div className={styles.headerRight}>
+            {score != null && (
+              <div className={styles.detailScore} style={{ background: scoreColor }}>{score.toFixed(2)}</div>
+            )}
+            <button className={styles.closeBtn} onClick={onClose}>×</button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className={styles.loading}>
+            <div className={styles.spinner} />
+            Computing evidence breakdown...
+          </div>
+        ) : !data ? (
+          <div className={styles.loading}>No evidence data available</div>
+        ) : (
+          <div className={styles.body}>
+            {/* ── Per-gene expression cards ── */}
+            <div className={styles.geneCards}>
+              {genes.map((g) => {
+                const gd = data.genes?.[g.hugo];
+                if (!gd) return null;
+                const dirLabel = gd.direction === "high" ? "HIGH ↑" : "LOW ↓";
+                const dirClass = gd.direction === "high" ? styles.dirHigh : styles.dirLow;
+                return (
+                  <div key={g.hugo} className={styles.geneCard}>
+                    <div className={styles.geneCardHeader}>
+                      <span className={styles.geneCardLabel}>
+                        {g.hugo} Expression
+                      </span>
+                      <span className={`${styles.dirBadge} ${dirClass}`}>
+                        {dirLabel}
+                      </span>
+                    </div>
+                    {perGeneScores[g.hugo] != null && (
+                      <div className={styles.geneCardScore}>
+                        Score: <strong>{perGeneScores[g.hugo].toFixed(4)}</strong>
+                      </div>
+                    )}
+                    {gd.expression_rank == null && (
+                      <div className={styles.geneCardRank}>No expression data</div>
+                    )}
+                    <div className={styles.geneCardSub}>
+                      {scoringMethod === "rrf"
+                        ? `RRF ensemble across ${gd.source_count} source${gd.source_count !== 1 ? "s" : ""} × 2 methods`
+                        : scoringMethod === "zscore"
+                        ? `Z-Score ranking across ${gd.source_count} source${gd.source_count !== 1 ? "s" : ""}`
+                        : `Percentile ranking across ${gd.source_count} source${gd.source_count !== 1 ? "s" : ""}`}
+                    </div>
+                    <div className={styles.geneCardSub}>
+                      Sources:{" "}
+                      {["DepMap", "HPA", "GEO"].map((src) => {
+                        const has = gd.sources.some((s) => s.source === src);
+                        return (
+                          <span key={src} className={has ? styles.srcYes : styles.srcNo}>
+                            {src} {has ? "✓" : "✗"}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Protein summary card — always shown */}
+              <div className={styles.geneCard}>
+                <div className={styles.geneCardHeader}>
+                  <span className={styles.geneCardLabel}>Protein Detection</span>
+                </div>
+                {data.protein ? (
+                  <>
+                    <div className={styles.geneCardRank}>
+                      Rank #{data.protein.z_rank}{" "}
+                      <span className={styles.rankTotal}>/ {data.protein.total?.toLocaleString()}</span>
+                    </div>
+                    <div className={styles.geneCardSub}>
+                      {genes[0]?.hugo}: Intensity {data.protein.intensity} · Gygi proteomics
+                    </div>
+                    <div className={`${styles.geneCardSub} ${styles.proteinConfirm}`}>
+                      Confirmed at protein level ✓
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.geneCardRank}>No protein data</div>
+                    <div className={styles.geneCardSub}>
+                      {genes[0]?.hugo}: not detected in Gygi proteomics
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* ── Source-Level Scores per gene ── */}
+            {genes.map((g) => {
+              const gd = data.genes?.[g.hugo];
+              if (!gd || gd.sources.length === 0) return null;
+              return (
+                <div key={g.hugo} className={styles.sourceSection}>
+                  <h4 className={styles.sectionLabel}>
+                    Source-Level Scores — {g.hugo}
+                  </h4>
+                  <div className={styles.sourceGrid}>
+                    {gd.sources.map((src) => {
+                      const combined = isNestedScores
+                        ? rawSourceScores[g.hugo]?.[src.source]
+                        : rawSourceScores[src.source];
+                      return (
+                        <div key={src.source} className={styles.sourceCard}>
+                          <h5 className={styles.sourceTitle}>{src.source}</h5>
+                          <div className={styles.sourceRow}>
+                            <span>TPM</span>
+                            <span className={styles.val}>{src.tpm}</span>
+                          </div>
+                          {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                            <div className={styles.sourceRow}>
+                              <span>Z-Score</span>
+                              <span className={styles.val}>
+                                {src.z_score > 0 ? "+" : ""}{src.z_score}
+                              </span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                            <div className={styles.sourceRow}>
+                              <span>Percentile</span>
+                              <span className={styles.val}>{src.percentile}%</span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                            <div className={styles.sourceRow}>
+                              <span>Z-Score Rank</span>
+                              <span className={styles.val}>#{src.z_rank}</span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                            <div className={styles.sourceRow}>
+                              <span>Percentile Rank</span>
+                              <span className={styles.val}>#{src.pct_rank}</span>
+                            </div>
+                          )}
+                          {combined != null && (
+                            <div className={`${styles.sourceRow} ${styles.sourceScoreRow}`}>
+                              <span>Score</span>
+                              <span className={styles.val}>{combined.toFixed(4)}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Protein source card — always shown */}
+                    <div className={styles.sourceCard}>
+                      <h5 className={styles.sourceTitle}>Protein (Gygi)</h5>
+                      {data.protein ? (
+                        <>
+                          <div className={styles.sourceRow}>
+                            <span>Intensity</span>
+                            <span className={styles.val}>{data.protein.intensity}</span>
+                          </div>
+                          {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                            <div className={styles.sourceRow}>
+                              <span>Z-Score</span>
+                              <span className={styles.val}>
+                                {data.protein.z_score > 0 ? "+" : ""}{data.protein.z_score}
+                              </span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                            <div className={styles.sourceRow}>
+                              <span>Percentile</span>
+                              <span className={styles.val}>{data.protein.percentile}%</span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "zscore") && (
+                            <div className={styles.sourceRow}>
+                              <span>Z-Score Rank</span>
+                              <span className={styles.val}>#{data.protein.z_rank}</span>
+                            </div>
+                          )}
+                          {(scoringMethod === "rrf" || scoringMethod === "percentile") && (
+                            <div className={styles.sourceRow}>
+                              <span>Percentile Rank</span>
+                              <span className={styles.val}>#{data.protein.pct_rank}</span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className={styles.sourceRow}>
+                          <span>No protein data</span>
+                          <span className={styles.val}>—</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* ── Mutation detail (only when mutation filter is active) ── */}
+            {mutationMode === "include" && data.mutations && data.mutations.length > 0 && (
+              <div className={styles.sourceSection}>
+                <h4 className={styles.sectionLabel}>
+                  Mutations in {genes.map((g) => g.hugo).join(", ")}
+                </h4>
+                <div className={styles.mutTableWrap}>
+                  <table className={styles.mutTable}>
+                    <thead>
+                      <tr>
+                        <th>Variant</th>
+                        <th>Type</th>
+                        <th>Protein</th>
+                        <th className={styles.thCenter}>Driver</th>
+                        <th className={styles.thCenter}>Hotspot</th>
+                        <th className={styles.thCenter}>Damaging</th>
+                        <th className={styles.thCenter}>Loss of function</th>
+                        <th className={styles.thCenter}>Mutation %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.mutations.map((m, i) => (
+                        <tr key={i}>
+                          <td className={styles.mono}>
+                            {m.chrom}:{m.pos} {m.ref}→{m.alt}
+                          </td>
+                          <td>{m.variant_type || "—"}</td>
+                          <td className={styles.proteinChange}>
+                            {m.protein_change || "—"}
+                          </td>
+                          <td className={styles.tdCenter}>
+                            <span className={`${styles.pill} ${m.is_driver ? styles.pillPass : styles.pillFail}`}>
+                              {m.is_driver ? "Yes" : "No"}
+                            </span>
+                          </td>
+                          <td className={styles.tdCenter}>
+                            <span className={`${styles.pill} ${m.is_hotspot ? styles.pillPass : styles.pillFail}`}>
+                              {m.is_hotspot ? "Yes" : "No"}
+                            </span>
+                          </td>
+                          <td className={styles.tdCenter}>
+                            <span className={`${styles.pill} ${m.is_damaging ? styles.pillPass : styles.pillFail}`}>
+                              {m.is_damaging ? "Yes" : "No"}
+                            </span>
+                          </td>
+                          <td className={styles.tdCenter}>
+                            <span className={`${styles.pill} ${m.is_lof ? styles.pillPass : styles.pillFail}`}>
+                              {m.is_lof ? "Yes" : "No"}
+                            </span>
+                          </td>
+                          <td className={styles.tdCenter}>
+                            {m.allele_freq != null
+                              ? `${(m.allele_freq * 100).toFixed(1)}%`
+                              : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ── Fusions (only when fusion filter is active) ── */}
+            {fusionMode === "include" && data.fusions && data.fusions.length > 0 && (
+              <div className={styles.sourceSection}>
+                <h4 className={styles.sectionLabel}>
+                  Fusions ({data.fusions.length})
+                </h4>
+                <div className={styles.mutTableWrap}>
+                  <table className={styles.mutTable}>
+                    <thead>
+                      <tr>
+                        <th>Fusion</th>
+                        <th>Confidence</th>
+                        <th>Frame</th>
+                        <th>Fusion Fragments (per million)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.fusions.map((f, i) => (
+                        <tr key={i}>
+                          <td className={styles.mono}>
+                            {f.fusion_name || `${f.gene1_hugo}—${f.gene2_hugo}`}
+                          </td>
+                          <td>{f.confidence}</td>
+                          <td>{f.reading_frame || "—"}</td>
+                          <td>{f.ffpm != null ? f.ffpm.toFixed(3) : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ── Similar Alternatives ── */}
+            <div className={styles.sourceSection}>
+              <div
+                className={styles.similarHeader}
+                onClick={() => { if (!similarOpen) loadSimilar(); else setSimilarOpen(!similarOpen); }}
+                style={{ cursor: "pointer" }}
+              >
+                <h4 className={styles.sectionLabel} style={{ margin: 0 }}>
+                  {similarOpen ? "▾" : "▸"} Similar Alternatives
+                </h4>
+                <span className={styles.similarHint}>
+                  {similarOpen ? "" : "Click to find similar cell lines"}
+                </span>
+              </div>
+              {similarOpen && similarLoading ? (
+                <div className={styles.similarLoading}>Finding similar cell lines...</div>
+              ) : similarOpen && similar?.similar?.length > 0 ? (
+                <div className={styles.similarGrid}>
+                  {similar.similar.map((s) => {
+                    const simPct = (s.similarity * 100).toFixed(1);
+                    const simColor =
+                      s.similarity >= 0.8 ? "#2f9e6f"
+                      : s.similarity >= 0.5 ? "#f0b429"
+                      : "#e05a4d";
+                    return (
+                      <div key={s.ach_id} className={styles.similarCard}>
+                        <div className={styles.similarCardHeader}>
+                          <div className={styles.similarCardName}>
+                            {s.cell_line_name || s.ach_id}
+                            {s.is_derivative && (
+                              <span className={styles.derivBadge} title="Shares a parent cell line">
+                                Derivative
+                              </span>
+                            )}
+                          </div>
+                          <div className={styles.similarScore} style={{ background: simColor }}>
+                            {simPct}%
+                          </div>
+                        </div>
+                        <div className={styles.similarMeta}>
+                          {s.primary_disease && <span>{s.primary_disease}</span>}
+                          {s.lineage && <span> · {s.lineage}</span>}
+                        </div>
+                        <div className={styles.similarLayers}>
+                          {s.expression_similarity != null && (
+                            <span className={styles.layerTag}>
+                              Expr {(s.expression_similarity * 100).toFixed(0)}%
+                            </span>
+                          )}
+                          {s.protein_similarity != null && (
+                            <span className={styles.layerTag}>
+                              Prot {(s.protein_similarity * 100).toFixed(0)}%
+                            </span>
+                          )}
+                          {s.metabolomics_similarity != null && (
+                            <span className={styles.layerTag}>
+                              Metab {(s.metabolomics_similarity * 100).toFixed(0)}%
+                            </span>
+                          )}
+                          {s.mirna_similarity != null && (
+                            <span className={styles.layerTag}>
+                              miRNA {(s.mirna_similarity * 100).toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                        {s.scored_on && (
+                          <div className={styles.similarScoredOn}>
+                            Scored on: {s.scored_on.join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : similarOpen && similar ? (
+                <div className={styles.similarLoading}>No similar cell lines found</div>
+              ) : null}
+            </div>
+
+            {/* ── Scoring method info ── */}
+            <div className={styles.methodInfo}>
+              <h4 className={styles.methodTitle}>Scoring Method</h4>
+              <p className={styles.methodText}>
+                {scoringMethod === "rrf" && (
+                  <>Expression ranked via <code>Z-Score</code> + <code>Percentile</code> per source (DepMap, HPA, GEO), combined with <code>Reciprocal Rank Fusion</code> (k=60).</>
+                )}
+                {scoringMethod === "zscore" && (
+                  <>Expression ranked via <code>Z-Score</code> only per source (DepMap, HPA, GEO), combined with <code>Reciprocal Rank Fusion</code> (k=60).</>
+                )}
+                {scoringMethod === "percentile" && (
+                  <>Expression ranked via <code>Percentile</code> only per source (DepMap, HPA, GEO), combined with <code>Reciprocal Rank Fusion</code> (k=60).</>
+                )}
+                {data.protein && (
+                  <> Protein scored separately, combined with RNA at the selected weighting.</>
+                )}
+                {genes.length > 1 && (
+                  <> Multi-gene combination via RRF across gene-specific ranks.</>
+                )}
+                {" "}Per-source scores use the selected RNA/Protein weights on the
+                same scale as the overall score.
+              </p>
+            </div>
+
+            {/* ── Data coverage bar ── */}
+            <div className={styles.omicsBar}>
+              <div>
+                <span className={styles.omicsLabel}>Data Coverage</span>
+                <br />
+                <span className={styles.omicsText}>
+                  RNA-seq ({data.data_coverage.rna_sources}/3 sources)
+                  {data.data_coverage.has_protein && " · Proteomics"}
+                  {data.data_coverage.has_mutations && " · Mutations"}
+                  {data.data_coverage.has_fusions && " · Fusions"}
+                </span>
+              </div>
+              <span className={styles.omicsCount}>
+                {data.data_coverage.total_types}/{data.data_coverage.max_types} DATA TYPES
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -13,19 +13,25 @@ data/processed/
 data/
 *.csv
 *.tsv
-*.txt
+# *.txt
 *.xlsx
 *.parquet
 *.gz
 *.zip
 *.gct
-*.json
+# *.json
 *.pkl
 
 # Allow small mapping/config files if needed
 !data/raw/README.md
 !data/processed/README.md
 !data/README.md
+
+# ============================================================
+# Node / Frontend
+# ============================================================
+node_modules/
+dist/
 
 # ============================================================
 # Python
@@ -64,4 +70,4 @@ Thumbs.db
 .env
 .env.local
 *.key
-credentials.json
+credentials.jsonnode_modules/

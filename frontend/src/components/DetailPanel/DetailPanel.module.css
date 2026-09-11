@@ -1,0 +1,549 @@
+/* ── DetailPanel (slide-in overlay — mockup v2) ────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.panel {
+  width: 620px;
+  max-width: 95vw;
+  height: 100vh;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e8e4dd;
+  background: #fafaf8;
+}
+
+.headerInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a2a3a;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.subtitle {
+  font-weight: 400;
+  color: #666;
+  font-size: 14px;
+}
+
+.achMeta {
+  display: block;
+  font-size: 11px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.detailScore {
+  background: #2d6a4f;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: #999;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  color: #333;
+}
+
+/* ── Loading ── */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: #888;
+  font-size: 14px;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e8e4dd;
+  border-top-color: #1a2a3a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Body ── */
+.body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Gene Cards (top grid) ── */
+.geneCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.geneCard {
+  background: #f9f8f6;
+  border: 1px solid #ebe8e2;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.geneCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.geneCardLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+}
+
+.dirBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.dirHigh {
+  background: #e8f4e8;
+  color: #2d6a4f;
+}
+
+.dirLow {
+  background: #fde8e8;
+  color: #c0392b;
+}
+
+.geneCardScore {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.geneCardScore strong {
+  font-size: 16px;
+  color: #2d6a4f;
+}
+
+.geneCardRank {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d6a4f;
+  margin-bottom: 4px;
+}
+
+.rankTotal {
+  font-weight: 400;
+  font-size: 13px;
+  color: #888;
+}
+
+.geneCardSub {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.6;
+}
+
+.srcYes {
+  color: #2d6a4f;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.srcNo {
+  color: #ccc;
+  margin-right: 6px;
+}
+
+.proteinConfirm {
+  color: #2d6a4f;
+  font-weight: 600;
+}
+
+/* ── Source-Level Scores ── */
+.sourceSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.sourceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.sourceCard {
+  background: #f9f8f6;
+  border: 1px solid #ebe8e2;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.sourceTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a2a3a;
+  margin: 0 0 10px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e8e4dd;
+}
+
+.sourceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.val {
+  font-weight: 700;
+  color: #1a2a3a;
+  font-size: 13px;
+}
+
+/* ── Mutation/Fusion tables ── */
+.mutTableWrap {
+  overflow-x: auto;
+}
+
+.mutTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.mutTable th {
+  text-align: left;
+  padding: 8px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e8e4dd;
+}
+
+.thCenter {
+  text-align: center !important;
+}
+
+.mutTable td {
+  padding: 8px 6px;
+  border-bottom: 1px solid #f0ede8;
+  vertical-align: middle;
+}
+
+.tdCenter {
+  text-align: center;
+}
+
+.mono {
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+
+.proteinChange {
+  font-weight: 600;
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.pillPass {
+  background: #e8f4e8;
+  color: #2d6a4f;
+}
+
+.pillFail {
+  background: #f5f3ee;
+  color: #999;
+}
+
+/* ── Similar Alternatives ── */
+.similarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  user-select: none;
+}
+
+.similarHeader:hover .sectionLabel {
+  color: #555;
+}
+
+.similarHint {
+  font-size: 11px;
+  color: #aaa;
+  font-style: italic;
+}
+
+.similarDesc {
+  font-size: 11px;
+  color: #888;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.similarLoading {
+  font-size: 12px;
+  color: #999;
+  padding: 12px 0;
+}
+
+.similarGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.similarCard {
+  background: #f9f8f6;
+  border: 1px solid #ebe8e2;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.similarCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.similarCardName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a2a3a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.derivBadge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: #fef3cd;
+  color: #856404;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.similarScore {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.similarMeta {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.similarLayers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.layerTag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: #eef2f7;
+  color: #4a6785;
+}
+
+.similarScoredOn {
+  font-size: 10px;
+  color: #aaa;
+}
+
+/* ── Scoring method ── */
+.methodInfo {
+  background: #f5f3ee;
+  border: 1px solid #e8e4dd;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.methodTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+  margin: 0 0 8px 0;
+}
+
+.methodText {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.methodText code {
+  background: #e8e4dd;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── Omics coverage bar ── */
+.omicsBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #1a2a3a;
+  color: #fff;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.omicsLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.omicsText {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.omicsCount {
+  font-size: 12px;
+  font-weight: 700;
+  background: #f0b429;
+  color: #1a2a3a;
+  padding: 4px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .panel {
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  .geneCards {
+    grid-template-columns: 1fr;
+  }
+
+  .sourceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .omicsBar {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 14px 16px;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .headerRight {
+    align-self: flex-end;
+  }
+
+  .body {
+    padding: 14px 16px;
+  }
+
+  .title {
+    font-size: 15px;
+  }
+
+  .subtitle {
+    display: none;
+  }
+}

@@ -1,0 +1,218 @@
+/* ── SearchBar (sidebar style) ────────────────────────────── */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Gene items — vertical list like mockup */
+.tags {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fafaf8;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2a3a;
+}
+
+.tagHigh {
+  /* inherits .tag base */
+}
+
+.tagLow {
+  /* inherits .tag base */
+}
+
+.tagDir {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.tagHigh .tagDir {
+  background: #e8f4e8;
+  color: #2d6a4f;
+}
+
+.tagLow .tagDir {
+  background: #fde8e8;
+  color: #c0392b;
+}
+
+.tagRemove {
+  background: none;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  color: #ccc;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+.tagRemove:hover {
+  color: #dc3545;
+}
+
+/* Input row */
+.inputRow {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.inputGroup {
+  position: relative;
+  flex: 1;
+}
+
+.input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid #ddd;
+  border-radius: 7px;
+  font-size: 13px;
+  background: #fafaf8;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: #f0b429;
+}
+
+/* Autocomplete dropdown */
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  box-shadow: var(--shadow-md);
+  list-style: none;
+  z-index: 100;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.dropdownItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.dropdownItem:hover,
+.dropdownItemActive {
+  background: #f5f3ee;
+}
+
+.hugoName {
+  font-weight: 700;
+  font-size: 14px;
+  color: #1a2a3a;
+}
+
+.ensemblId {
+  font-size: 10px;
+  color: #2d6a4f;
+  background: #e8f4e8;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+/* Direction toggle */
+.dirToggle {
+  display: flex;
+  border: 1.5px solid #ddd;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.dirBtn {
+  padding: 8px 6px;
+  border: none;
+  background: #fafaf8;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  transition: all 0.15s;
+  width: 50px;
+  text-align: center;
+}
+
+.dirBtn:not(:last-child) {
+  border-right: 1px solid #ddd;
+}
+
+.dirBtnActiveHigh {
+  background: #2d6a4f;
+  color: white;
+}
+
+.dirBtnActiveLow {
+  background: #c0392b;
+  color: white;
+}
+
+/* Add button */
+.addBtn {
+  padding: 8px 12px;
+  background: #1a2a3a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.addBtn:hover {
+  background: #2a4a6c;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .inputRow {
+    flex-wrap: wrap;
+  }
+
+  .inputGroup {
+    min-width: 100%;
+  }
+
+  .dirToggle {
+    flex: 1;
+  }
+
+  .addBtn {
+    flex: 1;
+  }
+}

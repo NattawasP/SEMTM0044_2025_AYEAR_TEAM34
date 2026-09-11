@@ -1,0 +1,272 @@
+/* ── FilterPanel ──────────────────────────────────────────── */
+
+.panel {
+  /* No border/shadow — sidebar section handles container */
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--clr-text);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+}
+
+.label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+}
+
+.hint {
+  font-size: 11px;
+  color: #888;
+  margin-top: -4px;
+  display: block;
+}
+
+/* ── Advanced toggle ─────────────────────────────────────── */
+
+.advancedToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 4px;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  background: var(--clr-surface);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.advancedToggle:hover {
+  background: var(--clr-bg);
+  border-color: #ccc;
+}
+
+.advancedBadge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #f0b429;
+  color: #1a2a3a;
+}
+
+.chevron {
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.advancedSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+  padding: 12px 0 0;
+  border-top: 1px solid var(--clr-border);
+  animation: slideDown 0.2s ease-out;
+}
+
+.groupHeader {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--clr-text-muted);
+  padding-bottom: 4px;
+  margin-top: 8px;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.groupHeader:first-child {
+  margin-top: 0;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Data source checkboxes ──────────────────────────────── */
+
+.sourceChecks {
+  display: flex;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.sourceCheck {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sourceCheck input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--clr-primary);
+}
+
+/* ── Mode toggle (Ignore / Include / Exclude) ────────────── */
+
+.modeToggle {
+  display: flex;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.modeBtn {
+  flex: 1;
+  padding: var(--sp-sm) var(--sp-md);
+  border: none;
+  background: var(--clr-surface);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--clr-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modeBtn:not(:last-child) {
+  border-right: 1px solid var(--clr-border);
+}
+
+.mode_ignore {
+  background: var(--clr-border);
+  color: var(--clr-text-secondary);
+  font-weight: 600;
+}
+
+.mode_include {
+  background: var(--clr-success);
+  color: white;
+  font-weight: 600;
+}
+
+.mode_exclude {
+  background: var(--clr-danger);
+  color: white;
+  font-weight: 600;
+}
+
+.inlineCheck {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+}
+
+/* ── Dropdowns ───────────────────────────────────────────── */
+
+.select {
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  background: var(--clr-surface);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.select:focus {
+  border-color: #f0b429;
+  box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.15);
+}
+
+/* ── Threshold inputs (exclusion filters) ────────────────── */
+
+.thresholdRow {
+  display: flex;
+  gap: var(--sp-sm);
+}
+
+.thresholdLabel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--clr-text-muted);
+  font-weight: 500;
+}
+
+.thresholdInput {
+  padding: 6px 8px;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  background: var(--clr-surface);
+  font-size: var(--fs-sm);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.thresholdInput:focus {
+  border-color: #f0b429;
+  box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.15);
+}
+
+/* ── Sliders ─────────────────────────────────────────────── */
+
+.slider {
+  width: 100%;
+  accent-color: #1a2a3a;
+  cursor: pointer;
+}
+
+/* ── Core checkbox ───────────────────────────────────────── */
+
+.checkField {
+  /* single column layout, no span needed */
+}
+
+.checkLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.checkLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--clr-primary);
+}
