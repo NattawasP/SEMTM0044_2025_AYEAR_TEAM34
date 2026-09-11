@@ -106,7 +106,7 @@
 
 % configure style of bibliography
 
-\bibliographystyle{plain}
+\bibliographystyle{unsrt}
 
 % configure style of pages
 
