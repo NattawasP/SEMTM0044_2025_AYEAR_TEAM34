@@ -11,14 +11,14 @@ Researchers specify target genes with desired expression directions, and the sys
 ## Features
 
 - **Multi-gene search** with per-gene high/low expression direction toggles
-- **RRF ensemble ranking** combining z-score and percentile ranks across three RNA sources and proteomics
-- **Flexible filtering** — hard-filter or soft-boost by disease/lineage/subtype, mutation/fusion include/exclude, MSI/CIN instability thresholds, metabolite and miRNA exclusion
+- **RRF ensemble ranking**: combining z-score and percentile ranks across three RNA sources and proteomics
+- **Flexible filtering**: hard-filter or soft-boost by disease/lineage/subtype, mutation/fusion include/exclude, MSI/CIN instability thresholds, metabolite and miRNA exclusion
 - **Assay compatibility warnings** (Q7) for adherent screens, 3D spheroids, and suspension assays
-- **Cosine similarity** — find the five most similar cell lines by expression profile
+- **Cosine similarity**: find the five most similar cell lines by expression profile
 - **Side-by-side comparison** of selected cell lines across all data sources
 - **CSV export** of ranked results with full query metadata
-- **LLM-powered chatbot** (GPT-4o-mini) for in-app data questions
-- **In-app documentation** covering usage, data sources, methodology, and project information
+- **LLM-powered chatbot**: (GPT-4o-mini) for in-app data questions
+- **In-app documentation**: covering usage, data sources, methodology, and project information
 
 ---
 
@@ -169,11 +169,11 @@ start_frontend.bat   # installs deps if needed, runs vite dev server
 
 The pipeline transforms 14 raw datasets into query-ready Parquet files in three stages:
 
-1. **Harmonization** — Python scripts and Jupyter notebooks clean each dataset: cell line names are resolved to DepMap accessions, gene symbols to Ensembl IDs, expression values are standardised to linear TPM in long format, and missing values are removed. This produces 8 harmonized CSV files in `harmonized_data/`.
+1. **Harmonization**: Python scripts and Jupyter notebooks clean each dataset: cell line names are resolved to DepMap accessions, gene symbols to Ensembl IDs, expression values are standardised to linear TPM in long format, and missing values are removed. This produces 8 harmonized CSV files in `harmonized_data/`.
 
-2. **Parquet conversion** — `data_prepare/csv_to_parquet.py` converts each CSV to Apache Parquet using PyArrow with Snappy compression, dictionary-encoding string columns and processing large tables in 500,000-row chunks.
+2. **Parquet conversion**: `data_prepare/csv_to_parquet.py` converts each CSV to Apache Parquet using PyArrow with Snappy compression, dictionary-encoding string columns and processing large tables in 500,000-row chunks.
 
-3. **DuckDB views** — At backend startup, `database.py` registers each Parquet file as a named view in an in-memory DuckDB instance (512 MB memory limit, 2 threads), so the data-access layer issues standard SQL without file handling.
+3. **DuckDB views**: At backend startup, `database.py` registers each Parquet file as a named view in an in-memory DuckDB instance (512 MB memory limit, 2 threads), so the data-access layer issues standard SQL without file handling.
 
 ### Parquet files
 
@@ -238,7 +238,7 @@ See `docs/deploy_ec2.md` for the full step-by-step deployment guide.
 
 ## Team
 
-**SEMTM0044 2025 — Team 34**
+**SEMTM0044 2025 - Team 34**
 University of Bristol × AstraZeneca
 
 - Mew Yongvibulsiri (2713327)
