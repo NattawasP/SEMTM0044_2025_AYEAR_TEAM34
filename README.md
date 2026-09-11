@@ -1,4 +1,5 @@
-# CellLineFinder
+# SEMTM0044_2025_AYEAR_TEAM34
+# CellLineFinder: A Harmonised Multi-Omics Ranking Tool for Cancer Cell Line Selection
 
 A multi-omics ranking platform for cancer cell line selection, developed as part of an MSc dissertation project at the University of Bristol in collaboration with AstraZeneca.
 
