@@ -38,6 +38,9 @@ export default function App() {
 
   /* Results state */
   const [results, setResults] = useState(null);
+  // The server echoes back the parameters it actually ranked with.
+  // Kept so the CSV export can record the query beside the results.
+  const [queryEcho, setQueryEcho] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   // Snapshot of filters at the time of the last successful search — used to
@@ -101,6 +104,7 @@ export default function App() {
 
       const res = await rankCellLines(apiParams);
       setResults(res.results);
+      setQueryEcho(res.query);
       setLastSearchedFilters(filters);
       setLastSearchedGenes(genes);
     } catch (err) {
@@ -284,6 +288,7 @@ export default function App() {
           )}
 
           <ResultsTable
+            query={queryEcho}
             results={displayedResults}
             loading={loading}
             selected={selected}

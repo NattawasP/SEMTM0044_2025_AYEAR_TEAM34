@@ -1,4 +1,5 @@
 import styles from "./ResultsTable.module.css";
+import { downloadCsv } from "./exportCsv";
 
 export default function ResultsTable({
   results,
@@ -7,6 +8,7 @@ export default function ResultsTable({
   onToggleSelect,
   onSelectAll,
   onRowClick,
+  query,
   mutationMode = "ignore",
   fusionMode = "ignore",
   assayType = null,
@@ -136,6 +138,18 @@ export default function ResultsTable({
 
   return (
     <div className={styles.wrapper}>
+      {/* Export bar - always visible when there are results, so the
+          ranking can be taken out of the browser for reporting. */}
+      <div className={styles.exportBar}>
+        <span className={styles.resultCount}>{results.length} cell lines</span>
+        <button
+          className={styles.exportBtn}
+          onClick={() => downloadCsv(results, query)}
+        >
+          Export CSV
+        </button>
+      </div>
+
       {/* Compare bar — shows when 2+ selected */}
       {selected.length >= 2 && (
         <div className={styles.compareBar}>

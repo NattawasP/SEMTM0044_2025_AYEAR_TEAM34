@@ -444,3 +444,30 @@
     min-width: 30px;
   }
 }
+
+/* Export bar above the results table */
+.exportBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px;
+}
+
+.resultCount {
+  font-size: 13px;
+  color: #666;
+}
+
+.exportBtn {
+  padding: 6px 14px;
+  font-size: 13px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.exportBtn:hover {
+  background: #f5f5f5;
+  border-color: #b0b0b0;
+}
