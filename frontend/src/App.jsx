@@ -7,6 +7,7 @@ import CompareView from "./components/CompareView/CompareView.jsx";
 import ChatWidget from "./components/ChatWidget/ChatWidget.jsx";
 import DocsModal from "./components/DocsModal/DocsModal.jsx";
 import { rankCellLines } from "./api";
+import { exportResultsCsv } from "./exportCsv";
 import styles from "./App.module.css";
 
 const DEFAULT_FILTERS = {
@@ -236,6 +237,21 @@ export default function App() {
                   }}
                 >
                   {loading ? "Refreshing..." : "↻ Refresh"}
+                </button>
+                <button
+                  onClick={() => exportResultsCsv({ results: displayedResults, genes, filters })}
+                  style={{
+                    padding: "6px 14px",
+                    fontSize: "13px",
+                    borderRadius: "6px",
+                    border: "1px solid #ccc",
+                    background: "#fff",
+                    color: "#555",
+                    cursor: "pointer",
+                  }}
+                  title="Download results as CSV"
+                >
+                  Export CSV
                 </button>
                 <span className={styles.resultsMeta}>
                   Showing <b>{displayedResults.length}</b> cell lines · Ranked by{" "}
